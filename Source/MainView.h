@@ -21,6 +21,7 @@ public:
     MainView ()
     :   featureListView     (featureListModel)
     {
+        setLookAndFeel (SharedResourcePointer<FeatureExtractorLookAndFeel>());
         addAndMakeVisible (audioDeviceSelector);
         addAndMakeVisible (audioScrollingDisplay);
 
@@ -30,12 +31,8 @@ public:
         featureListView.recreateVisualisersFromModel();
         
         addAndMakeVisible (featureListView);
-    }
 
-    void setAudioSettingsDeviceManager (AudioDeviceManager& deviceManager)
-    {
-        addAndMakeVisible (audioDeviceSelector = new AudioDeviceSelectorComponent (deviceManager, 2, 2, 2, 2, false, false, true, true));
-        resized();
+        addAndMakeVisible (oscSettingsController.getView());
     }
 
     void resized() override
@@ -54,15 +51,25 @@ public:
         featureListView.setBounds       (localBounds.removeFromTop (featureVisualiserHeight));
         localBounds.removeFromTop       (verticalMargin);
 
-        auto settingsBounds = localBounds.removeFromTop (settingsHeight);
+        auto settingsBounds = localBounds.removeFromTop (settingsHeight).reduced (horizontalMargin, 0);
         const auto panelWidth = (settingsBounds.getWidth() - horizontalMargin) / 2;
         if (audioDeviceSelector)
+        {
             audioDeviceSelector->setBounds (settingsBounds.removeFromLeft (panelWidth));
+            settingsBounds.removeFromLeft  (horizontalMargin);
+        }
+        oscSettingsController.getView().setBounds (settingsBounds.removeFromLeft (panelWidth));
     }
 
     LiveScrollingAudioDisplay& getAudioDisplayComponent()
     {
         return audioScrollingDisplay;
+    }
+
+    void setAudioSettingsDeviceManager (AudioDeviceManager& deviceManager)
+    {
+        addAndMakeVisible (audioDeviceSelector = new AudioDeviceSelectorComponent (deviceManager, 2, 2, 2, 2, false, false, true, true));
+        resized();
     }
 
     void setFeatureValueQueryCallback (std::function<float (ConcatenatedFeatureBuffer::Feature)> f)
@@ -74,12 +81,19 @@ public:
     {
     }
 
+    void setAddressChangedCallback (std::function<bool (String)> f) { oscSettingsController.setAddressChangedCallback (f); }
+
+    void setDisplayedOSCAddress (String address)
+    {
+        oscSettingsController.getView().getAddressEditor().setText (address);
+    }
+
 private:
     LiveScrollingAudioDisplay                   audioScrollingDisplay;
     ScopedPointer<AudioDeviceSelectorComponent> audioDeviceSelector;
     FeatureListModel                            featureListModel;
     FeatureListView                             featureListView;
-       
+    OSCSettingsController                       oscSettingsController;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainView)
 };
 

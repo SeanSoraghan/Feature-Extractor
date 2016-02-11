@@ -45,11 +45,7 @@ public:
     void timerCallback() override
     {
         setSpectralFeatureAudioBuffer();
-        setHarmonicFeatureAudioBuffer();
         extractFeatures();
-        
-        //owner.paintingBufferNeedsUpdating = 1;
-        //owner.pitchAnalysisBufferNeedsUpdating = 1;
     }
 
     void sampleRateChanged (double newSampleRate)
@@ -80,35 +76,19 @@ private:
 
     void setSpectralFeatureAudioBuffer()
     {
-        AudioSampleBuffer audioWindow = audioDataCollector.getSpectralAnalysisBuffer ();
+        int numSamplesInAnalysisWindow   = audioAnalyserSpec.fftIn.getNumSamples();
+        AudioSampleBuffer audioWindow = audioDataCollector.getSpectralAnalysisBuffer (numSamplesInAnalysisWindow);
+        
         int numChannels = audioWindow.getNumChannels();
 
         int numSamplesInCollectedBuffer  = audioWindow.getNumSamples();
-        int numSamplesInAnalysisWindow   = audioAnalyserSpec.fftIn.getNumSamples();
-        int numSamplesLeftOver           = numSamplesInCollectedBuffer - numSamplesInAnalysisWindow;
+
         spectralFeatures.audioOutput.setSize (numChannels, 
-                                              numSamplesInCollectedBuffer);        
+                                              numSamplesInCollectedBuffer, false, true);        
         spectralFeatures.audioOutput.clear();
         for (int c = 0; c < numChannels; c++)
         {
-            spectralFeatures.audioOutput.copyFrom (c, 0, audioWindow, c, 0, numSamplesInAnalysisWindow);
-        }
-
-        if (numSamplesLeftOver < numSamplesInAnalysisWindow)
-            audioDataCollector.spectralAnalysisBufferNeedsUpdating.set (1);
-    }
-
-    void setHarmonicFeatureAudioBuffer()
-    {
-        AudioSampleBuffer audioWindow = audioDataCollector.getHarmonicAnalysisBuffer();
-        int numChannels = audioWindow.getNumChannels();
-        int numSamples  = audioWindow.getNumSamples();
-        harmonicFeatures.audioOutput.setSize (numChannels, 
-                                              numSamples);        
-        harmonicFeatures.audioOutput.clear();
-        for (int c = 0; c < numChannels; c++)
-        {
-            harmonicFeatures.audioOutput.copyFrom (c, 0, audioWindow, c, 0, numSamples);
+            spectralFeatures.audioOutput.copyFrom (c, 0, audioWindow, c, 0, numSamplesInCollectedBuffer);
         }
     }
 

@@ -25,6 +25,7 @@
         <FILE id="EV9uhN" name="LiveScrollingAudioDisplay.h" compile="0" resource="0"
               file="Source/LiveScrollingAudioDisplay.h"/>
         <FILE id="bxk1H8" name="MainView.h" compile="0" resource="0" file="Source/MainView.h"/>
+        <FILE id="juXzzq" name="OSCSettings.h" compile="0" resource="0" file="Source/OSCSettings.h"/>
       </GROUP>
       <FILE id="Gz5EKX" name="include.h" compile="0" resource="0" file="Source/include.h"/>
       <FILE id="vznz0B" name="MainComponent.cpp" compile="1" resource="0"

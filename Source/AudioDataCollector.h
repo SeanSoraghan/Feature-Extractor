@@ -18,7 +18,11 @@
 class AudioDataCollector : public AudioIODeviceCallback
 {
 public:
-    AudioDataCollector() {}
+    AudioDataCollector() 
+    {
+        circleBuffer.setSize (2, 4096);
+        circleBuffer.clear();
+    }
 
     void audioDeviceAboutToStart (AudioIODevice*) override
     {}
@@ -31,61 +35,68 @@ public:
                                 int numberOfSamples) override
     {
         const float** channelData = collectInput ? inputChannelData : outputChannelData;
-        if (spectralAnalysisBufferNeedsUpdating.get() == 1)
+        if (writeIndex + numberOfSamples <= circleBuffer.getNumSamples())
         {
-            spectralAnalysisBuffer.setSize (2, numberOfSamples);
-            spectralAnalysisBuffer.clear();
-            spectralAnalysisBuffer.addFrom (0, 0, inputChannelData[0], numberOfSamples);
-            spectralAnalysisBuffer.addFrom (1, 0, inputChannelData[1], numberOfSamples);
-
-            spectralAnalysisBufferNeedsUpdating.set (0);
+            circleBuffer.addFrom (0, writeIndex, channelData[0], numberOfSamples);
+            circleBuffer.addFrom (1, writeIndex, channelData[1], numberOfSamples);
         }
-
-        if (harmonicAnalysisBufferNeedsUpdating.get() == 1)
+        else
         {
-            if (harmonicAnalysisBufferPosition == 0)
-                harmonicAnalysisBuffer.setSize (2, 0);
-
-            harmonicAnalysisBuffer.setSize (2, harmonicAnalysisBuffer.getNumSamples() + numberOfSamples, true/*keep existing content*/, true/*clear exrtra space*/);
-            harmonicAnalysisBuffer.addFrom (0, harmonicAnalysisBuffer.getNumSamples() - numberOfSamples, inputChannelData[0], numberOfSamples);
-            harmonicAnalysisBuffer.addFrom (1, harmonicAnalysisBuffer.getNumSamples() - numberOfSamples, inputChannelData[1], numberOfSamples);
-
-            harmonicAnalysisBufferPosition ++;
-
-            if (harmonicAnalysisBufferPosition >= 8)
+            for (int index = 0; index < numberOfSamples; index++)
             {
-                harmonicAnalysisBufferNeedsUpdating.set (0);
-                harmonicAnalysisBufferPosition = 0;
+                const int modIndex = (index + writeIndex) % circleBuffer.getNumSamples();
+                circleBuffer.setSample (0, modIndex, channelData[0][index]);
+                circleBuffer.setSample (1, modIndex, channelData[1][index]);
             }
         }
+        writeIndex = (writeIndex + numberOfSamples) % circleBuffer.getNumSamples();
     }
 
-    AudioSampleBuffer getHarmonicAnalysisBuffer()
+    AudioSampleBuffer getSpectralAnalysisBuffer (int numSamplesRequired)
     {
-        if (harmonicAnalysisBufferNeedsUpdating.get() == 0)
-            return harmonicAnalysisBuffer;
+        while (indexesOverlap (numSamplesRequired))
+        {}
 
-        return AudioSampleBuffer();
+        AudioSampleBuffer buffer = AudioSampleBuffer();
+        buffer.clear();
+        buffer.setSize (2, numSamplesRequired);
+        if (spectralReadPosition + numSamplesRequired <= circleBuffer.getNumSamples())
+        {
+            buffer.copyFrom (0, 0, circleBuffer, 0, spectralReadPosition, numSamplesRequired);
+            buffer.copyFrom (1, 0, circleBuffer, 1, spectralReadPosition, numSamplesRequired);
+        }
+        else
+        {
+            for (int index = 0; index < numSamplesRequired; index++)
+            {
+                const int modIndex = (index + spectralReadPosition) % circleBuffer.getNumSamples();
+                buffer.setSample (0, index, circleBuffer.getReadPointer (0)[modIndex]);
+                buffer.setSample (1, index, circleBuffer.getReadPointer (1)[modIndex]);
+            }
+        }
+        spectralReadPosition = (spectralReadPosition + numSamplesRequired) % circleBuffer.getNumSamples();
+        return buffer;
     }
 
-    AudioSampleBuffer getSpectralAnalysisBuffer()
+    bool indexesOverlap (int numSamplesToFill)
     {
-        if (spectralAnalysisBufferNeedsUpdating.get() == 0)
-            return spectralAnalysisBuffer;
-
-        return AudioSampleBuffer();
+        if (writeIndex < spectralReadPosition)
+            if (spectralReadPosition < writeIndex + expectedSamplesPerBlock)
+                return true;
+        if (spectralReadPosition < writeIndex)
+            if (writeIndex < spectralReadPosition + numSamplesToFill)
+                return true;
+        return false;
+            
     }
-
-    void toggleCollectInput (bool shouldCollectInput) { collectInput = shouldCollectInput; }
-
-    Atomic<int> harmonicAnalysisBufferNeedsUpdating { 0 };
-    Atomic<int> spectralAnalysisBufferNeedsUpdating { 0 };
-
+    void toggleCollectInput         (bool shouldCollectInput) noexcept { collectInput = shouldCollectInput; }
+    void setExpectedSamplesPerBlock (int spb)                 noexcept { expectedSamplesPerBlock = spb; }
 private:
-    bool collectInput { true };
-    AudioSampleBuffer spectralAnalysisBuffer;
-    AudioSampleBuffer harmonicAnalysisBuffer;
-    int harmonicAnalysisBufferPosition { 0 };
+    AudioSampleBuffer circleBuffer;
+    int writeIndex              { 0 };
+    int spectralReadPosition    { 0 };
+    int expectedSamplesPerBlock { 512 };
+    bool collectInput           { true };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioDataCollector)
 };

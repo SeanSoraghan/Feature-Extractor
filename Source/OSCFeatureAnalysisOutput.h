@@ -89,15 +89,9 @@ public:
             if (f > (int) OSCFeatureType::Slope)                            //harmonic
                 featureHistories.push_back (ValueHistory (8));
             else                                                            //Spectral
-                featureHistories.push_back (ValueHistory (2));
+                featureHistories.push_back (ValueHistory (5));
         }
-        String address = IPAddress::local().toString();
-        DBG("connecting to: "<<address);
-
-        if (! sender.connect (address, 9001))
-            DBG ("Error: could not connect to UDP port 9000.");
-        else
-            startTimerHz (FeatureExtractorLookAndFeel::getAnimationRateHz());
+        connectToAddress (IPAddress::local().toString());
     }
 
     void timerCallback ()
@@ -128,14 +122,10 @@ public:
         }
     }
 
-    float getRunningAverage (Feature f)
+    float getRunningAverage (OSCFeatureType oscf)
     {
-        if (ConcatenatedFeatureBuffer::isFeatureSpectral (f))
-            return realTimeAudioFeatures.getSpectralFeatures().getAverageFeatureSample (f, 0);
-        else
-            return realTimeAudioFeatures.getHarmonicFeatures().getAverageFeatureSample (f, 0);
-
-        return 0.0f;
+        ValueHistory& h = featureHistories[oscf];
+        return h.getTotal() / (float) h.recordedHistory;
     }
 
     float getRunningAverageAndUpdateHistory (Feature f, OSCFeatureType oscf)
@@ -163,9 +153,33 @@ public:
         return returnValue;
     }
 
+    bool connectToAddress (String newAddress)
+    {
+        int port = 9000;
+        int portSeparatorIndex = newAddress.lastIndexOfAnyOf (":");
+
+        if (portSeparatorIndex != -1)
+            port = newAddress.fromLastOccurrenceOf (":", false, true).getIntValue();
+
+        address = newAddress.upToFirstOccurrenceOf (":", false, true);
+
+        DBG("connecting to: "<<address);
+        if (! sender.connect (address, port))
+        {
+            DBG ("Error: could not connect to UDP port "<<port);
+            return false;
+        }
+        else
+        {
+            startTimerHz (FeatureExtractorLookAndFeel::getAnimationRateHz());
+            return true;
+        }
+    }
+
     RealTimeAnalyser&         realTimeAudioFeatures;
     OSCSender                 sender;
     std::vector<ValueHistory> featureHistories;
+    String                    address;
 };
 
 

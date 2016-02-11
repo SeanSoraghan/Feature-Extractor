@@ -96,7 +96,7 @@ public:
                 visualiser->setValue (getLatestFeatureValue (visualiser->featureType));
     }
 
-    void paint (Graphics& g) override
+    void paint (Graphics& /*g*/) override
     {}
 
     void resized() override

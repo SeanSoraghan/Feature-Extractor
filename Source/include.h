@@ -23,6 +23,7 @@
 
 #include "AudioFeaturesListComponent.h"
 #include "LiveScrollingAudioDisplay.h"
+#include "OSCSettings.h"
 #include "MainView.h"
 
 

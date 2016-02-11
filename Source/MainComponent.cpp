@@ -33,7 +33,9 @@ public:
         view.setFeatureValueQueryCallback ([this] (ConcatenatedFeatureBuffer::Feature f) { return oscFeatureSender.getRunningAverage (f); });
         //switches between listening to input or output
         view.setAudioDataStreamToggleCallback ([this] (bool input) { audioDataCollector.toggleCollectInput (input); });
+        view.setAddressChangedCallback ([this] (String address) { return oscFeatureSender.connectToAddress (address); });
         view.setAudioSettingsDeviceManager (deviceManager);
+        view.setDisplayedOSCAddress (oscFeatureSender.address);
     }
 
     ~MainContentComponent()
@@ -46,6 +48,7 @@ public:
     {
         view.getAudioDisplayComponent().setSamplesPerBlock (samplesPerBlockExpected);
         audioAnalyser.sampleRateChanged (sampleRate);
+        audioDataCollector.setExpectedSamplesPerBlock (samplesPerBlockExpected);
     }
 
     void getNextAudioBlock (const AudioSourceChannelInfo& bufferToFill) override
@@ -78,6 +81,7 @@ public:
     }
 
 private:
+    SharedResourcePointer<FeatureExtractorLookAndFeel> lookAndFeel;
     MainView                 view;
     AudioDataCollector       audioDataCollector;
     RealTimeAnalyser         audioAnalyser;
