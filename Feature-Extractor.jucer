@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<JUCERPROJECT id="GHLpCD" name="Feature-Extractor" projectType="guiapp" version="1.0.0"
+              bundleIdentifier="com.yourcompany.FeatureExtractor" includeBinaryInAppConfig="1"
+              jucerVersion="4.1.0">
+  <MAINGROUP id="NL8vov" name="Feature-Extractor">
+    <GROUP id="{B4A167B2-F57A-6468-E14C-759AA38DF98D}" name="Source">
+      <GROUP id="{3AA8C1AF-03B1-776E-058E-DDD6A4C37C23}" name="OSC">
+        <FILE id="NqDJST" name="OSCFeatureAnalysisOutput.h" compile="0" resource="0"
+              file="Source/OSCFeatureAnalysisOutput.h"/>
+      </GROUP>
+      <GROUP id="{29DF75BB-9F0D-3A11-B7EE-0A224FB3FCF4}" name="AudioAnalysis">
+        <FILE id="dIvwWA" name="AudioAnalysis.h" compile="0" resource="0" file="Source/AudioAnalysis.h"/>
+        <FILE id="nmW3mf" name="AudioDataCollector.h" compile="0" resource="0"
+              file="Source/AudioDataCollector.h"/>
+        <FILE id="K50rWy" name="AudioFeatures.h" compile="0" resource="0" file="Source/AudioFeatures.h"/>
+        <FILE id="DB6AIY" name="RealTimeAnalyser.h" compile="0" resource="0"
+              file="Source/RealTimeAnalyser.h"/>
+      </GROUP>
+      <GROUP id="{85C55AD8-1816-3A74-1907-BF60B6B73A66}" name="GUI">
+        <FILE id="DJc3Zm" name="AudioFeaturesListComponent.h" compile="0" resource="0"
+              file="Source/AudioFeaturesListComponent.h"/>
+        <FILE id="AVMqtV" name="FeatureExtractorLookAndFeel.h" compile="0"
+              resource="0" file="Source/FeatureExtractorLookAndFeel.h"/>
+        <FILE id="EV9uhN" name="LiveScrollingAudioDisplay.h" compile="0" resource="0"
+              file="Source/LiveScrollingAudioDisplay.h"/>
+        <FILE id="bxk1H8" name="MainView.h" compile="0" resource="0" file="Source/MainView.h"/>
+      </GROUP>
+      <FILE id="Gz5EKX" name="include.h" compile="0" resource="0" file="Source/include.h"/>
+      <FILE id="vznz0B" name="MainComponent.cpp" compile="1" resource="0"
+            file="Source/MainComponent.cpp"/>
+      <FILE id="Civ57J" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
+    </GROUP>
+  </MAINGROUP>
+  <EXPORTFORMATS>
+    <VS2015 targetFolder="Builds/VisualStudio2015">
+      <CONFIGURATIONS>
+        <CONFIGURATION name="Debug" winWarningLevel="4" generateManifest="1" winArchitecture="32-bit"
+                       isDebug="1" optimisation="1" targetName="Feature-Extractor"/>
+        <CONFIGURATION name="Release" winWarningLevel="4" generateManifest="1" winArchitecture="32-bit"
+                       isDebug="0" optimisation="3" targetName="Feature-Extractor"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_core" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_events" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_graphics" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_data_structures" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_gui_basics" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_gui_extra" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_cryptography" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_video" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_opengl" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_basics" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_devices" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_formats" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_processors" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_utils" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_osc" path="../equator-2/JUCE/modules"/>
+      </MODULEPATHS>
+    </VS2015>
+    <VS2010 targetFolder="Builds/VisualStudio2010">
+      <CONFIGURATIONS>
+        <CONFIGURATION name="Debug" winWarningLevel="4" generateManifest="1" winArchitecture="32-bit"
+                       isDebug="1" optimisation="1" targetName="Feature-Extractor"/>
+        <CONFIGURATION name="Release" winWarningLevel="4" generateManifest="1" winArchitecture="32-bit"
+                       isDebug="0" optimisation="3" targetName="Feature-Extractor"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_core" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_events" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_graphics" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_data_structures" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_gui_basics" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_gui_extra" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_cryptography" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_video" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_opengl" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_basics" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_devices" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_formats" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_processors" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_utils" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_osc" path="../equator-2/JUCE/modules"/>
+      </MODULEPATHS>
+    </VS2010>
+  </EXPORTFORMATS>
+  <MODULES>
+    <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_audio_devices" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_audio_formats" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_audio_processors" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_audio_utils" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_core" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_cryptography" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_events" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_graphics" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_gui_extra" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_opengl" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_osc" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_video" showAllCode="1" useLocalCopy="0"/>
+  </MODULES>
+  <JUCEOPTIONS/>
+</JUCERPROJECT>
