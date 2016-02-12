@@ -14,6 +14,8 @@
 #include "../JuceLibraryCode/JuceHeader.h"
 #include "FeatureExtractorLookAndFeel.h"
 
+#include "AudioFilePlayer.h"
+
 #include "AudioDataCollector.h"
 #include "AudioFeatures.h"
 #include "AudioAnalysis.h"
@@ -21,6 +23,7 @@
 
 #include "OSCFeatureAnalysisOutput.h"
 
+#include "AudioSourceSelectorComboBox.h"
 #include "AudioFeaturesListComponent.h"
 #include "LiveScrollingAudioDisplay.h"
 #include "OSCSettings.h"

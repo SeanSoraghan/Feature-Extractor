@@ -5,6 +5,10 @@
               jucerVersion="4.1.0">
   <MAINGROUP id="NL8vov" name="Feature-Extractor">
     <GROUP id="{B4A167B2-F57A-6468-E14C-759AA38DF98D}" name="Source">
+      <GROUP id="{18EA58DB-8594-7B91-F382-B60069520EBF}" name="AudioPlayback">
+        <FILE id="hcmHQC" name="AudioFilePlayer.h" compile="0" resource="0"
+              file="Source/AudioFilePlayer.h"/>
+      </GROUP>
       <GROUP id="{3AA8C1AF-03B1-776E-058E-DDD6A4C37C23}" name="OSC">
         <FILE id="NqDJST" name="OSCFeatureAnalysisOutput.h" compile="0" resource="0"
               file="Source/OSCFeatureAnalysisOutput.h"/>
@@ -20,6 +24,8 @@
       <GROUP id="{85C55AD8-1816-3A74-1907-BF60B6B73A66}" name="GUI">
         <FILE id="DJc3Zm" name="AudioFeaturesListComponent.h" compile="0" resource="0"
               file="Source/AudioFeaturesListComponent.h"/>
+        <FILE id="fP6GcG" name="AudioSourceSelectorComboBox.h" compile="0"
+              resource="0" file="Source/AudioSourceSelectorComboBox.h"/>
         <FILE id="AVMqtV" name="FeatureExtractorLookAndFeel.h" compile="0"
               resource="0" file="Source/FeatureExtractorLookAndFeel.h"/>
         <FILE id="EV9uhN" name="LiveScrollingAudioDisplay.h" compile="0" resource="0"

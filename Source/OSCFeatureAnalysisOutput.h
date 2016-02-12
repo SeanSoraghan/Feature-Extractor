@@ -81,6 +81,33 @@ public:
         NumFeatures
     };
 
+    static OSCFeatureType oscFeatureTypeFromFeature (ConcatenatedFeatureBuffer::Feature f)
+    {
+        typedef ConcatenatedFeatureBuffer::Feature Feature;
+        switch (f)
+        {
+            case Feature::Audio:
+                return OSCFeatureType::RMS;
+            case Feature::Centroid:
+                return OSCFeatureType::Centroid;
+            case Feature::Flatness:
+                return OSCFeatureType::Flatness;
+            case Feature::Spread:
+                return OSCFeatureType::Spread;
+            case Feature::Slope:
+                return OSCFeatureType::Slope;
+            case Feature::HER:
+                return OSCFeatureType::HER;
+            case Feature::Inharmonicity:
+                return OSCFeatureType::Inharmonicity;
+            case Feature::F0:
+                return OSCFeatureType::F0;
+            default:
+                jassertfalse;
+                return OSCFeatureType::NumFeatures;
+        }
+    }
+
     OSCFeatureAnalysisOutput (RealTimeAnalyser& rta)
     :   realTimeAudioFeatures (rta)
     {

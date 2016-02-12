@@ -33,6 +33,8 @@ public:
         addAndMakeVisible (featureListView);
 
         addAndMakeVisible (oscSettingsController.getView());
+
+        addAndMakeVisible (audioSourceTypeSelectorController.getSelector());
     }
 
     void resized() override
@@ -59,6 +61,12 @@ public:
             settingsBounds.removeFromLeft  (horizontalMargin);
         }
         oscSettingsController.getView().setBounds (settingsBounds.removeFromLeft (panelWidth));
+
+        auto displayBounds = audioScrollingDisplay.getBounds();
+        auto selectorBounds = displayBounds.removeFromLeft (FeatureExtractorLookAndFeel::getAudioSourceTypeSelectorWidth())
+                                           .removeFromTop  (FeatureExtractorLookAndFeel::getAudioSourceTypeSelectorHeight());
+
+        audioSourceTypeSelectorController.getSelector().setBounds (selectorBounds);
     }
 
     LiveScrollingAudioDisplay& getAudioDisplayComponent()
@@ -72,7 +80,7 @@ public:
         resized();
     }
 
-    void setFeatureValueQueryCallback (std::function<float (ConcatenatedFeatureBuffer::Feature)> f)
+    void setFeatureValueQueryCallback (std::function<float (OSCFeatureAnalysisOutput::OSCFeatureType)> f)
     {
         featureListView.setFeatureValueQueryCallback (f);
     }
@@ -94,6 +102,7 @@ private:
     FeatureListModel                            featureListModel;
     FeatureListView                             featureListView;
     OSCSettingsController                       oscSettingsController;
+    AudioSourceSelectorController               audioSourceTypeSelectorController;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainView)
 };
 

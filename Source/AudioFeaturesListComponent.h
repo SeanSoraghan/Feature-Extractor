@@ -93,7 +93,7 @@ public:
     {
         if (getLatestFeatureValue)
             for (auto visualiser : featureVisualisers)
-                visualiser->setValue (getLatestFeatureValue (visualiser->featureType));
+                visualiser->setValue (getLatestFeatureValue (OSCFeatureAnalysisOutput::oscFeatureTypeFromFeature (visualiser->featureType)));
     }
 
     void paint (Graphics& /*g*/) override
@@ -113,11 +113,11 @@ public:
         }
     }
     
-    void setFeatureValueQueryCallback (std::function <float (ConcatenatedFeatureBuffer::Feature)> f) { getLatestFeatureValue = f; }
+    void setFeatureValueQueryCallback (std::function <float (OSCFeatureAnalysisOutput::OSCFeatureType)> f) { getLatestFeatureValue = f; }
 
 private:
     OwnedArray<FeatureVisualiser> featureVisualisers;
-    std::function<float (ConcatenatedFeatureBuffer::Feature)> getLatestFeatureValue;
+    std::function<float (OSCFeatureAnalysisOutput::OSCFeatureType)> getLatestFeatureValue;
     FeatureListModel& model;
 };
 

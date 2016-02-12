@@ -30,7 +30,9 @@ public:
         deviceManager.addAudioCallback (&view.getAudioDisplayComponent());
         deviceManager.addAudioCallback (&audioDataCollector);
 
-        view.setFeatureValueQueryCallback ([this] (ConcatenatedFeatureBuffer::Feature f) { return oscFeatureSender.getRunningAverage (f); });
+        audioFilePlayer.setupAudioCallback (deviceManager);
+
+        view.setFeatureValueQueryCallback ([this] (OSCFeatureAnalysisOutput::OSCFeatureType oscf) { return oscFeatureSender.getRunningAverage (oscf); });
         //switches between listening to input or output
         view.setAudioDataStreamToggleCallback ([this] (bool input) { audioDataCollector.toggleCollectInput (input); });
         view.setAddressChangedCallback ([this] (String address) { return oscFeatureSender.connectToAddress (address); });
@@ -83,6 +85,7 @@ public:
 private:
     SharedResourcePointer<FeatureExtractorLookAndFeel> lookAndFeel;
     MainView                 view;
+    AudioFilePlayer          audioFilePlayer;
     AudioDataCollector       audioDataCollector;
     RealTimeAnalyser         audioAnalyser;
     OSCFeatureAnalysisOutput oscFeatureSender;
