@@ -82,7 +82,6 @@ private:
     {
         for (int type = 0; type < (int) enNumSourceTypes; type++)
         {
-            int iD = type + 1;
             eAudioSourceType sourceType = (eAudioSourceType) type;
             String sourceTypeText = getAudioSourceTypeString (sourceType);
             selectorComboBox.addItem (sourceTypeText, getComboBoxIDForAudioSourceType (sourceType));

@@ -18,6 +18,8 @@ public:
     :   thread ("audio preload thread")
     {
         formatManager.registerBasicFormats();
+        thread.startThread (3);
+        audioTransportSource.setLooping (true);
     }
 
     ~AudioFilePlayer()
@@ -51,6 +53,13 @@ public:
                                             reader->sampleRate);     // allows for sample rate correction
         }
     }
+
+    void play ()   { audioTransportSource.start(); }
+    void pause()   { audioTransportSource.stop(); }
+    void stop()    { pause(); audioTransportSource.setPosition (0.0); }
+    void restart() { audioTransportSource.setPosition (0.0); }
+
+    bool hasFile() { return currentAudioFileSource != nullptr; }
 
 private:
     AudioFormatManager                     formatManager;

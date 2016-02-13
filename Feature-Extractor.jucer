@@ -24,6 +24,8 @@
       <GROUP id="{85C55AD8-1816-3A74-1907-BF60B6B73A66}" name="GUI">
         <FILE id="DJc3Zm" name="AudioFeaturesListComponent.h" compile="0" resource="0"
               file="Source/AudioFeaturesListComponent.h"/>
+        <FILE id="Frk5aD" name="AudioFileTransportComponent.h" compile="0"
+              resource="0" file="Source/AudioFileTransportComponent.h"/>
         <FILE id="fP6GcG" name="AudioSourceSelectorComboBox.h" compile="0"
               resource="0" file="Source/AudioSourceSelectorComboBox.h"/>
         <FILE id="AVMqtV" name="FeatureExtractorLookAndFeel.h" compile="0"

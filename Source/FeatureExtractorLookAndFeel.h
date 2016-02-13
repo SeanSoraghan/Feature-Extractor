@@ -19,24 +19,27 @@ class FeatureExtractorLookAndFeel : public LookAndFeel_V3
 public:
     FeatureExtractorLookAndFeel() {}
 
-    static float getAudioDisplayHeightRatio()               noexcept { return 0.2f; }
-    static float getFeatureVisualiserComponentHeightRatio() noexcept { return 0.4f; }
-    static float getSettingsHeightRatio()                   noexcept { return 0.4f; }
-    static int   getFeatureVisualiserTextHeight()           noexcept { return 10; }
-    static int   getFeatureVisualiserGraphicWidth()         noexcept { return 2; }
-    static int   getOSCSettingsWidth()                      noexcept { return 200; }
-    static int   getOSCSettingsHeight()                     noexcept { return 100; }
-    static int   getAudioSourceTypeSelectorWidth()          noexcept { return 200; }
-    static int   getAudioSourceTypeSelectorHeight()         noexcept { return 20; }
-    static int   getFeatureVisualiserTextGraphicMargin()    noexcept { return 15; }
-    static int   getVerticalMargin()                        noexcept { return 50; }
-    static int   getHorizontalMargin()                      noexcept { return 30; }
-    static int   getAnimationRateHz ()                      noexcept { return 60; }
-    static float getCornerSize()                            noexcept { return 4.0f; }
-    static float getLineThickness()                         noexcept { return 1.0f; }
-    static Colour getTextColour()                           noexcept { return Colours::white; }
-    static Colour getControlBackgroundColour()              noexcept { return Colours::green; }
-    static Colour getTextEditorBackgroundColour()           noexcept { return Colours::lightgreen; }
+    static float  getAudioDisplayHeightRatio()               noexcept { return 0.2f; }
+    static float  getFeatureVisualiserComponentHeightRatio() noexcept { return 0.4f; }
+    static float  getSettingsHeightRatio()                   noexcept { return 0.4f; }
+    static int    getFeatureVisualiserTextHeight()           noexcept { return 10; }
+    static int    getFeatureVisualiserGraphicWidth()         noexcept { return 2; }
+    static int    getOSCSettingsWidth()                      noexcept { return 200; }
+    static int    getOSCSettingsHeight()                     noexcept { return 150; }
+    static int    getAudioTransportControlsWidth()           noexcept { return 200; }
+    static int    getAudioTransportControlsHeight()          noexcept { return 50; }
+    static int    getAudioSourceTypeSelectorWidth()          noexcept { return 200; }
+    static int    getAudioSourceTypeSelectorHeight()         noexcept { return 20; }
+    static int    getFeatureVisualiserTextGraphicMargin()    noexcept { return 15; }
+    static int    getVerticalMargin()                        noexcept { return 50; }
+    static int    getHorizontalMargin()                      noexcept { return 30; }
+    static int    getAnimationRateHz ()                      noexcept { return 60; }
+    static float  getCornerSize()                            noexcept { return 4.0f; }
+    static float  getLineThickness()                         noexcept { return 1.0f; }
+    static Colour getTextColour()                            noexcept { return Colours::white; }
+    static Colour getControlBackgroundColour()               noexcept { return Colours::green; }
+    static Colour getTextEditorBackgroundColour()            noexcept { return Colours::lightgreen; }
+    static Colour getAudioTransportButtonForegroundColour()  noexcept { return Colours::black; }
 
     static void paintFeatureVisualiser (Graphics& g, float value, Rectangle<int> visualiserBounds)
     {
@@ -75,7 +78,7 @@ public:
         g.drawRect (label.getLocalBounds());
     }
 
-    void drawComboBox (Graphics& g, int width, int height, const bool /*isButtonDown*/,
+    void drawComboBox (Graphics& g, int /*width*/, int /*height*/, bool /*isButtonDown*/,
                                    int buttonX, int buttonY, int buttonW, int buttonH, ComboBox& box) override
     {
         g.setColour (getControlBackgroundColour());
@@ -108,11 +111,11 @@ public:
     }
 
     void drawPopupMenuItem (Graphics& g, const Rectangle<int>& area,
-                                        const bool isSeparator, const bool isActive,
-                                        const bool isHighlighted, const bool isTicked,
-                                        const bool hasSubMenu, const String& text,
+                                         bool isSeparator,  bool isActive,
+                                        bool isHighlighted,  bool isTicked,
+                                         bool hasSubMenu, const String& text,
                                         const String& shortcutKeyText,
-                                        const Drawable* icon, const Colour* const textColourToUse) override
+                                        const Drawable* icon, const Colour* textColourToUse) override
     {
         if (isSeparator)
         {
@@ -200,7 +203,56 @@ public:
         }
     }
 
-    void drawButtonBackground (Graphics& g, Button& button, const Colour& backgroundColour,
+    enum eAudioTransportButtonType
+    {
+        enPlay = 0,
+        enPause,
+        enRestart,
+        enStop
+    };
+
+    static void drawAudioTransportButton (Graphics& g, eAudioTransportButtonType t, Rectangle<int> bounds, Button& button)
+    {
+        Colour baseColour (getControlBackgroundColour().withMultipliedSaturation (button.hasKeyboardFocus (true) ? 1.3f : 0.9f)
+                                                       .withMultipliedAlpha (button.isEnabled() ? 0.9f : 0.5f));
+
+        if (button.isMouseButtonDown() || button.isMouseOver())
+            baseColour = baseColour.contrasting (button.isMouseButtonDown() ? 0.2f : 0.1f);
+
+        g.setColour (baseColour);
+        g.fillRoundedRectangle (button.getLocalBounds().toFloat(), getCornerSize());
+
+        g.setColour (getAudioTransportButtonForegroundColour());
+        const auto b = bounds.withSizeKeepingCentre (30, 30).toFloat();
+        const auto w = b.getWidth();
+        const auto h = b.getHeight();
+        const auto quarterWidth = b.getX() + w / 4.0f;
+        const auto threeQuarterWidth = b.getRight() - (w / 4.0f);
+        switch (t)
+        {
+        case enPlay:
+            g.drawLine (quarterWidth,      b.getY(),       threeQuarterWidth, b.getCentreY());
+            g.drawLine (threeQuarterWidth, b.getCentreY(), quarterWidth,      b.getBottom());
+            break;
+        case enPause:
+            g.drawLine (quarterWidth,      b.getY(), quarterWidth,      b.getBottom());
+            g.drawLine (threeQuarterWidth, b.getY(), threeQuarterWidth, b.getBottom());
+            break;
+        case enRestart:
+            g.drawLine (b.getX(), b.getCentreY(), quarterWidth, b.getY());
+            g.drawLine (b.getX(), b.getCentreY(), quarterWidth, b.getBottom());
+            g.drawLine (threeQuarterWidth, b.getCentreY(), b.getRight(), b.getY());
+            g.drawLine (threeQuarterWidth, b.getCentreY(), b.getRight(), b.getBottom());
+            break;
+        case enStop:
+            g.drawRoundedRectangle (b.toFloat(), getCornerSize(), getLineThickness());
+            break;
+        default:
+            break;
+        }
+    }
+
+    void drawButtonBackground (Graphics& g, Button& button, const Colour& /*backgroundColour*/,
                                            bool isMouseOverButton, bool isButtonDown) override
     {
         Colour baseColour (getControlBackgroundColour().withMultipliedSaturation (button.hasKeyboardFocus (true) ? 1.3f : 0.9f)
@@ -213,7 +265,7 @@ public:
         g.fillRoundedRectangle (button.getLocalBounds().toFloat(), getCornerSize());
     }
 
-    void drawTextEditorOutline (Graphics& g, int width, int height, TextEditor& textEditor) override
+    void drawTextEditorOutline (Graphics& g, int /*width*/, int /*height*/, TextEditor& textEditor) override
     {
         if (textEditor.isEnabled())
         {

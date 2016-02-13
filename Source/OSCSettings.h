@@ -15,12 +15,15 @@ class OSCSettingsView : public Component
 {
 public:
     OSCSettingsView()
-    :   label ("address", "Send to OSC Address:")
+    :   label       ("address", "Send to OSC Address:"),
+        bundleLabel ("Bundle Address", "Use bundle address:")
     {
-        label.setJustificationType (Justification::centred);
         addressEditor.setInputFilter (new TextEditor::LengthAndCharacterRestriction (30, "1234567890.:"), true);
+        
         addAndMakeVisible (label);
         addAndMakeVisible (addressEditor);
+        addAndMakeVisible (bundleLabel);
+        addAndMakeVisible (bundleAddressEditor);
     }
 
     void resized() override
@@ -28,9 +31,10 @@ public:
         auto centralBounds = getLocalBounds().withSizeKeepingCentre (FeatureExtractorLookAndFeel::getOSCSettingsWidth(),
                                                                      FeatureExtractorLookAndFeel::getOSCSettingsHeight());
         int availableHeight = centralBounds.getHeight() - FeatureExtractorLookAndFeel::getVerticalMargin();
-        label.setBounds (centralBounds.removeFromTop (availableHeight / 2));
-        centralBounds.removeFromTop (availableHeight / 2);
-        addressEditor.setBounds (centralBounds.removeFromTop (availableHeight / 2));
+        for (int i = 0; i < getNumChildComponents(); i++)
+        {
+            getChildComponent (i)->setBounds (centralBounds.removeFromTop (availableHeight / 4));
+        }
     }
 
     TextEditor& getAddressEditor()
@@ -38,9 +42,16 @@ public:
         return addressEditor;
     }
 
+    TextEditor& getBundleAddressEditor()
+    {
+        return bundleAddressEditor;
+    }
+
 private:
     Label      label;
+    Label      bundleLabel;
     TextEditor addressEditor;
+    TextEditor bundleAddressEditor;
 };
 
 //==============================================================================
@@ -52,16 +63,22 @@ public:
     OSCSettingsController()
     {
         view.getAddressEditor().addListener (this);
+        view.getBundleAddressEditor().addListener (this);
     }
 
     void textEditorReturnKeyPressed (TextEditor& editor) 
     {
-        if (addressChangedCallback)
-            if ( ! addressChangedCallback (editor.getText()))
-                editor.setText (String::empty);
+        if (&editor == &getView().getAddressEditor())
+            if (addressChangedCallback)
+                if ( ! addressChangedCallback (editor.getText()))
+                    editor.setText (String::empty);
+        if (&editor == &getView().getBundleAddressEditor())
+            if (bundleAddressChangedCallback)
+                bundleAddressChangedCallback (editor.getText());
     }
 
-    void setAddressChangedCallback (std::function<bool (String address)> function) { addressChangedCallback = function; }
+    void setAddressChangedCallback       (std::function<bool (String address)> function) { addressChangedCallback = function; }
+    void setBundleAddressChangedCallback (std::function<void (String address)> function) { bundleAddressChangedCallback = function; }
 
     OSCSettingsView& getView()
     {
@@ -70,6 +87,7 @@ public:
 
 private:
     std::function<bool (String address)> addressChangedCallback;
+    std::function<void (String address)> bundleAddressChangedCallback;
     OSCSettingsView view;
 };
 

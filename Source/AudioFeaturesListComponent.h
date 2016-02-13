@@ -16,18 +16,18 @@ class FeatureListModel
 public:
     FeatureListModel() {}
 
-    void addFeature (ConcatenatedFeatureBuffer::Feature f)
+    void addFeature (OSCFeatureAnalysisOutput::OSCFeatureType f)
     {
         visualisedFeatures.add (f);
     }
 
-    Array<ConcatenatedFeatureBuffer::Feature>& getFeaturesToVisualise()
+    Array<OSCFeatureAnalysisOutput::OSCFeatureType>& getFeaturesToVisualise()
     {
         return visualisedFeatures;
     }
 
 private:
-    Array<ConcatenatedFeatureBuffer::Feature> visualisedFeatures;
+    Array<OSCFeatureAnalysisOutput::OSCFeatureType> visualisedFeatures;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FeatureListModel)
 };
@@ -44,7 +44,7 @@ public:
     class FeatureVisualiser : public Component
     {
     public:
-        FeatureVisualiser (ConcatenatedFeatureBuffer::Feature f) : featureType (f) {}
+        FeatureVisualiser (OSCFeatureAnalysisOutput::OSCFeatureType f) : featureType (f) {}
         
         void paint (Graphics& g) override 
         {
@@ -56,7 +56,7 @@ public:
 
             FeatureExtractorLookAndFeel::paintFeatureVisualiser (g, value, visualiserBounds);
             g.setColour (Colours::white);
-            g.drawText  (ConcatenatedFeatureBuffer::getFeatureName (featureType), textBounds, Justification::centred);
+            g.drawText  (OSCFeatureAnalysisOutput::getOSCFeatureName (featureType), textBounds, Justification::centred);
         }
 
         void setValue (float v) noexcept 
@@ -65,7 +65,7 @@ public:
             MessageManager::getInstance()->callAsync ([this](){ repaint(); });
         }
 
-        ConcatenatedFeatureBuffer::Feature featureType;
+        OSCFeatureAnalysisOutput::OSCFeatureType featureType;
         float value;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FeatureVisualiser)
@@ -93,7 +93,7 @@ public:
     {
         if (getLatestFeatureValue)
             for (auto visualiser : featureVisualisers)
-                visualiser->setValue (getLatestFeatureValue (OSCFeatureAnalysisOutput::oscFeatureTypeFromFeature (visualiser->featureType)));
+                visualiser->setValue (getLatestFeatureValue (visualiser->featureType));
     }
 
     void paint (Graphics& /*g*/) override

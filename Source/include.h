@@ -25,6 +25,7 @@
 
 #include "AudioSourceSelectorComboBox.h"
 #include "AudioFeaturesListComponent.h"
+#include "AudioFileTransportComponent.h"
 #include "LiveScrollingAudioDisplay.h"
 #include "OSCSettings.h"
 #include "MainView.h"

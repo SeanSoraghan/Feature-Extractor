@@ -25,14 +25,17 @@ public:
         addAndMakeVisible (audioDeviceSelector);
         addAndMakeVisible (audioScrollingDisplay);
 
-        for (int i = 0; i < (int) ConcatenatedFeatureBuffer::Feature::ZeroCrosses; i++)
-            featureListModel.addFeature ((ConcatenatedFeatureBuffer::Feature) i);
+        for (int i = 0; i < (int) OSCFeatureAnalysisOutput::OSCFeatureType::F0; i++)
+            featureListModel.addFeature ((OSCFeatureAnalysisOutput::OSCFeatureType) i);
         
         featureListView.recreateVisualisersFromModel();
         
         addAndMakeVisible (featureListView);
 
         addAndMakeVisible (oscSettingsController.getView());
+
+        addAndMakeVisible (audioFileTransportController.getView());
+        audioFileTransportController.getView().setVisible (false);
 
         addAndMakeVisible (audioSourceTypeSelectorController.getSelector());
     }
@@ -48,10 +51,11 @@ public:
         const int displayHeight            = (int) (FeatureExtractorLookAndFeel::getAudioDisplayHeightRatio() * availableHeight);
         const int featureVisualiserHeight  = (int) (FeatureExtractorLookAndFeel::getFeatureVisualiserComponentHeightRatio() * availableHeight);
 
-        audioScrollingDisplay.setBounds (localBounds.removeFromTop (displayHeight));
-        localBounds.removeFromTop       (verticalMargin);
-        featureListView.setBounds       (localBounds.removeFromTop (featureVisualiserHeight));
-        localBounds.removeFromTop       (verticalMargin);
+        audioScrollingDisplay.setBounds                  (localBounds.removeFromTop (displayHeight));
+        audioFileTransportController.getView().setBounds (audioScrollingDisplay.getBounds());
+        localBounds.removeFromTop                        (verticalMargin);
+        featureListView.setBounds                        (localBounds.removeFromTop (featureVisualiserHeight));
+        localBounds.removeFromTop                        (verticalMargin);
 
         auto settingsBounds = localBounds.removeFromTop (settingsHeight).reduced (horizontalMargin, 0);
         const auto panelWidth = (settingsBounds.getWidth() - horizontalMargin) / 2;
@@ -85,8 +89,9 @@ public:
         featureListView.setFeatureValueQueryCallback (f);
     }
 
-    void setAudioDataStreamToggleCallback (std::function<void (bool)> f)
+    void setAudioSourceTypeChangedCallback (std::function<void (AudioSourceSelectorController::eAudioSourceType type)> f)
     {
+        audioSourceTypeSelectorController.setAudioSourceTypeChangedCallback (f);
     }
 
     void setAddressChangedCallback (std::function<bool (String)> f) { oscSettingsController.setAddressChangedCallback (f); }
@@ -96,8 +101,37 @@ public:
         oscSettingsController.getView().getAddressEditor().setText (address);
     }
 
+    void setBundleAddressChangedCallback (std::function<void (String)> f) { oscSettingsController.setBundleAddressChangedCallback (f); }
+
+    void setDisplayedBundleAddress (String address)
+    {
+        oscSettingsController.getView().getBundleAddressEditor().setText (address);
+    }
+
+    void setFileDroppedCallback (std::function<void (File&)> f) { audioFileTransportController.setFileDroppedCallback (f); }
+
+    void toggleShowTransportControls (bool shouldShowControls)
+    {
+        audioFileTransportController.getView().setVisible (shouldShowControls);
+    }
+
+    void clearAudioDisplayData()
+    {
+        audioScrollingDisplay.clear();
+    }
+
+    void setAudioTransportState (AudioFileTransportController::eAudioTransportState state)
+    {
+        audioFileTransportController.setAudioTransportState (state);
+    }
+
+    void setPlayPressedCallback (std::function<void()> f)    { audioFileTransportController.setPlayPressedCallback (f); }
+    void setPausePressedCallback (std::function<void()> f)   { audioFileTransportController.setPausePressedCallback (f); }
+    void setRestartPressedCallback (std::function<void()> f) { audioFileTransportController.setRestartPressedCallback (f); }
+    void setStopPressedCallback (std::function<void()> f)    { audioFileTransportController.setStopPressedCallback (f); }
 private:
     LiveScrollingAudioDisplay                   audioScrollingDisplay;
+    AudioFileTransportController                audioFileTransportController;
     ScopedPointer<AudioDeviceSelectorComponent> audioDeviceSelector;
     FeatureListModel                            featureListModel;
     FeatureListView                             featureListView;

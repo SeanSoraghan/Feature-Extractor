@@ -81,6 +81,21 @@ public:
         NumFeatures
     };
 
+    static String getOSCFeatureName (OSCFeatureType f)
+    {
+        switch (f)
+        {
+            case RMS:         return "RMS";
+            case Centroid:    return "Centroid";
+            case Slope:       return "Slope";
+            case Spread:      return "Spread";
+            case Flatness:    return "Flatness";
+            case F0:          return "F0";
+            case NumFeatures: return "NumFeatures";
+            default: jassert(false); return "UNKNOWN";
+        }
+    }
+
     static OSCFeatureType oscFeatureTypeFromFeature (ConcatenatedFeatureBuffer::Feature f)
     {
         typedef ConcatenatedFeatureBuffer::Feature Feature;
@@ -145,14 +160,20 @@ public:
         }
         else
         {
-            sender.send ("/Audio/Feature/Spectral", rmsLevel, centroid, flatness, spread, slope);
+            sender.send (bundleAddress, rmsLevel, centroid, flatness, spread, slope);
         }
     }
 
     float getRunningAverage (OSCFeatureType oscf)
     {
-        ValueHistory& h = featureHistories[oscf];
-        return h.getTotal() / (float) h.recordedHistory;
+        ValueHistory rms = featureHistories[OSCFeatureType::RMS];
+        float rmsAverage = rms.getTotal() / (float) rms.recordedHistory;
+        if (rmsAverage > 0.01f)
+        {
+            ValueHistory& h = featureHistories[oscf];
+            return h.getTotal() / (float) h.recordedHistory;
+        }
+        return 0.0f;
     }
 
     float getRunningAverageAndUpdateHistory (Feature f, OSCFeatureType oscf)
@@ -207,6 +228,7 @@ public:
     OSCSender                 sender;
     std::vector<ValueHistory> featureHistories;
     String                    address;
+    String bundleAddress      { String("/Audio/Features") };
 };
 
 

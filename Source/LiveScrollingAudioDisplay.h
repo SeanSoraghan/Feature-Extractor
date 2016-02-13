@@ -40,15 +40,17 @@ public:
                                 float** outputChannelData, int numOutputChannels,
                                 int numberOfSamples) override
     {
+        const float** channelData = drawInput ? inputChannelData : outputChannelData;
+        const int numChannels     = drawInput ? numInputChannels : numOutputChannels;
         for (int i = 0; i < numberOfSamples; ++i)
         {
             float inputSample = 0;
 
-            for (int chan = 0; chan < numInputChannels; ++chan)
-                if (const float* inputChannel = inputChannelData[chan])
-                    inputSample += inputChannel[i];  // find the sum of all the channels
+            for (int chan = 0; chan < numChannels; ++chan)
+                if (const float* channel = channelData[chan])
+                    inputSample += channel[i];  // find the sum of all the channels
 
-            inputSample *= 10.0f; // boost the level to make it more easily visible.
+            inputSample *= 5.0f; // boost the level to make it more easily visible.
 
             pushSample (&inputSample, 1);
         }
@@ -58,6 +60,14 @@ public:
             if (float* outputChannel = outputChannelData[j])
                 zeromem (outputChannel, sizeof (float) * (size_t) numberOfSamples);
     }
+
+    void toggleDrawInput (bool shouldDrawInput) 
+    { 
+        drawInput = shouldDrawInput; 
+    }
+
+private:
+    bool drawInput { true };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LiveScrollingAudioDisplay)
 };

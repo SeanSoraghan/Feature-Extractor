@@ -89,8 +89,9 @@ public:
         return false;
             
     }
-    void toggleCollectInput         (bool shouldCollectInput) noexcept { collectInput = shouldCollectInput; }
+    void toggleCollectInput         (bool shouldCollectInput) noexcept { clearBuffer(); collectInput = shouldCollectInput; }
     void setExpectedSamplesPerBlock (int spb)                 noexcept { expectedSamplesPerBlock = spb; }
+    void clearBuffer() { circleBuffer.clear(); }
 private:
     AudioSampleBuffer circleBuffer;
     int writeIndex              { 0 };

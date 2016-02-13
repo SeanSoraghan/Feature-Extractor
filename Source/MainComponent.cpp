@@ -27,17 +27,51 @@ public:
         // specify the number of input and output channels that we want to open
         setAudioChannels  (2, 2);
         addAndMakeVisible (view);
+        
         deviceManager.addAudioCallback (&view.getAudioDisplayComponent());
         deviceManager.addAudioCallback (&audioDataCollector);
+        
 
         audioFilePlayer.setupAudioCallback (deviceManager);
 
         view.setFeatureValueQueryCallback ([this] (OSCFeatureAnalysisOutput::OSCFeatureType oscf) { return oscFeatureSender.getRunningAverage (oscf); });
         //switches between listening to input or output
-        view.setAudioDataStreamToggleCallback ([this] (bool input) { audioDataCollector.toggleCollectInput (input); });
-        view.setAddressChangedCallback ([this] (String address) { return oscFeatureSender.connectToAddress (address); });
-        view.setAudioSettingsDeviceManager (deviceManager);
-        view.setDisplayedOSCAddress (oscFeatureSender.address);
+        view.setAudioSourceTypeChangedCallback ([this] (AudioSourceSelectorController::eAudioSourceType type) 
+                                                        { 
+                                                            bool input = type == AudioSourceSelectorController::enIncomingAudio;
+                                                           
+                                                            if (input)
+                                                                audioFilePlayer.stop();
+                                                            
+                                                            audioDataCollector.toggleCollectInput (input);
+                                                            view.getAudioDisplayComponent().toggleDrawInput (input);
+                                                            view.toggleShowTransportControls (type == AudioSourceSelectorController::enAudioFile);
+                                                            view.clearAudioDisplayData();
+                                                        }
+                                                );
+
+        view.setFileDroppedCallback ([this] (File& f) 
+                                    { 
+                                        audioDataCollector.clearBuffer();
+                                        view.clearAudioDisplayData();
+                                        audioFilePlayer.loadFileIntoTransport (f); 
+
+                                        if (audioFilePlayer.hasFile())
+                                            view.setAudioTransportState (AudioFileTransportController::eAudioTransportState::enFileStopped);
+                                        else
+                                            view.setAudioTransportState (AudioFileTransportController::eAudioTransportState::enNoFileSelected);
+                                    } );
+
+        view.setPlayPressedCallback    ([this] () { audioFilePlayer.play(); audioDataCollector.clearBuffer(); });
+        view.setPausePressedCallback   ([this] () { audioFilePlayer.pause(); audioDataCollector.clearBuffer(); });
+        view.setStopPressedCallback    ([this] () { audioFilePlayer.stop(); audioDataCollector.clearBuffer(); });
+        view.setRestartPressedCallback ([this] () { audioFilePlayer.restart(); });
+
+        view.setAddressChangedCallback       ([this] (String address) { return oscFeatureSender.connectToAddress (address); });
+        view.setBundleAddressChangedCallback ([this] (String address) { oscFeatureSender.bundleAddress = address; });
+        view.setAudioSettingsDeviceManager   (deviceManager);
+        view.setDisplayedOSCAddress          (oscFeatureSender.address);
+        view.setDisplayedBundleAddress       (oscFeatureSender.bundleAddress);
     }
 
     ~MainContentComponent()
