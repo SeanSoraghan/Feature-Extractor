@@ -15,7 +15,7 @@ class OSCSettingsView : public Component
 {
 public:
     OSCSettingsView()
-    :   label       ("address", "Send to OSC Address:"),
+    :   label       ("address", "Send to OSC address:"),
         bundleLabel ("Bundle Address", "Use bundle address:")
     {
         addressEditor.setInputFilter (new TextEditor::LengthAndCharacterRestriction (30, "1234567890.:"), true);

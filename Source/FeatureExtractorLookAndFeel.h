@@ -111,11 +111,11 @@ public:
     }
 
     void drawPopupMenuItem (Graphics& g, const Rectangle<int>& area,
-                                         bool isSeparator,  bool isActive,
-                                        bool isHighlighted,  bool isTicked,
-                                         bool hasSubMenu, const String& text,
-                                        const String& shortcutKeyText,
-                                        const Drawable* icon, const Colour* textColourToUse) override
+                                         bool isSeparator,   bool isActive,
+                                         bool isHighlighted, bool isTicked,
+                                         bool hasSubMenu,    const String& text,
+                                         const String& shortcutKeyText,
+                                         const Drawable* icon, const Colour* textColourToUse) override
     {
         if (isSeparator)
         {
