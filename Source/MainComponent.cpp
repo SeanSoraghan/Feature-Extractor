@@ -28,13 +28,28 @@ public:
         setAudioChannels  (2, 2);
         addAndMakeVisible (view);
         
-        deviceManager.addAudioCallback (&view.getAudioDisplayComponent());
+        //deviceManager.addAudioCallback (&view.getAudioDisplayComponent());
+        audioDataCollector.setSpectralBufferUpdatedCallback ([this] (AudioSampleBuffer& b) 
+                                                             {
+                                                                 view.getAudioDisplayComponent().pushBuffer (b);
+                                                             });
+
+        oscFeatureSender.onsetDetectedCallback = ([this] () 
+                                                 {
+                                                     view.featureTriggered (OSCFeatureAnalysisOutput::OSCFeatureType::Onset);
+                                                 });
+
         deviceManager.addAudioCallback (&audioDataCollector);
         
 
         audioFilePlayer.setupAudioCallback (deviceManager);
 
-        view.setFeatureValueQueryCallback ([this] (OSCFeatureAnalysisOutput::OSCFeatureType oscf) { return oscFeatureSender.getRunningAverage (oscf); });
+        view.setFeatureValueQueryCallback ([this] (OSCFeatureAnalysisOutput::OSCFeatureType oscf) 
+                                                   { 
+                                                       if ( ! OSCFeatureAnalysisOutput::isTriggerFeature (oscf))
+                                                           return oscFeatureSender.getRunningAverage (oscf); 
+                                                   });
+
         //switches between listening to input or output
         view.setAudioSourceTypeChangedCallback ([this] (AudioSourceSelectorController::eAudioSourceType type) 
                                                         { 
@@ -44,12 +59,11 @@ public:
                                                                 audioFilePlayer.stop();
                                                             
                                                             audioDataCollector.toggleCollectInput (input);
-                                                            view.getAudioDisplayComponent().toggleDrawInput (input);
                                                             view.toggleShowTransportControls (type == AudioSourceSelectorController::enAudioFile);
                                                             view.clearAudioDisplayData();
                                                         }
                                                 );
-
+        
         view.setFileDroppedCallback ([this] (File& f) 
                                     { 
                                         audioDataCollector.clearBuffer();
@@ -62,10 +76,11 @@ public:
                                             view.setAudioTransportState (AudioFileTransportController::eAudioTransportState::enNoFileSelected);
                                     } );
 
-        view.setPlayPressedCallback    ([this] () { audioFilePlayer.play(); audioDataCollector.clearBuffer(); });
-        view.setPausePressedCallback   ([this] () { audioFilePlayer.pause(); audioDataCollector.clearBuffer(); });
-        view.setStopPressedCallback    ([this] () { audioFilePlayer.stop(); audioDataCollector.clearBuffer(); });
-        view.setRestartPressedCallback ([this] () { audioFilePlayer.restart(); });
+        view.setOnsetSensitivityCallback ([this] (float s) {oscFeatureSender.setOnsetDetectionSensitivity (s); });
+        view.setPlayPressedCallback      ([this] ()        { audioFilePlayer.play(); audioDataCollector.clearBuffer(); });
+        view.setPausePressedCallback     ([this] ()        { audioFilePlayer.pause(); audioDataCollector.clearBuffer(); });
+        view.setStopPressedCallback      ([this] ()        { audioFilePlayer.stop(); audioDataCollector.clearBuffer(); });
+        view.setRestartPressedCallback   ([this] ()        { audioFilePlayer.restart(); });
 
         view.setAddressChangedCallback       ([this] (String address) { return oscFeatureSender.connectToAddress (address); });
         view.setBundleAddressChangedCallback ([this] (String address) { oscFeatureSender.bundleAddress = address; });

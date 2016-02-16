@@ -23,6 +23,7 @@ public:
         Slope,
         Spread,
         Flatness,
+        Flux,
         ZeroCrosses,
         F0,
         HER,

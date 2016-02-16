@@ -19,9 +19,15 @@ class MainView : public Component
 {
 public:
     MainView ()
-    :   featureListView     (featureListModel)
+    :   audioScrollingDisplay (2),
+        featureListView       (featureListModel)
     {
         setLookAndFeel (SharedResourcePointer<FeatureExtractorLookAndFeel>());
+        
+        audioScrollingDisplay.clear();
+        audioScrollingDisplay.setSamplesPerBlock (256);
+        audioScrollingDisplay.setBufferSize (1024);
+
         addAndMakeVisible (audioDeviceSelector);
         addAndMakeVisible (audioScrollingDisplay);
 
@@ -73,10 +79,7 @@ public:
         audioSourceTypeSelectorController.getSelector().setBounds (selectorBounds);
     }
 
-    LiveScrollingAudioDisplay& getAudioDisplayComponent()
-    {
-        return audioScrollingDisplay;
-    }
+    AudioVisualiserComponent& getAudioDisplayComponent() { return audioScrollingDisplay; }
 
     void setAudioSettingsDeviceManager (AudioDeviceManager& deviceManager)
     {
@@ -84,53 +87,29 @@ public:
         resized();
     }
 
-    void setFeatureValueQueryCallback (std::function<float (OSCFeatureAnalysisOutput::OSCFeatureType)> f)
-    {
-        featureListView.setFeatureValueQueryCallback (f);
-    }
+    void setAudioSourceTypeChangedCallback (std::function<void (AudioSourceSelectorController::eAudioSourceType type)> f) { audioSourceTypeSelectorController.setAudioSourceTypeChangedCallback (f); }
 
-    void setAudioSourceTypeChangedCallback (std::function<void (AudioSourceSelectorController::eAudioSourceType type)> f)
-    {
-        audioSourceTypeSelectorController.setAudioSourceTypeChangedCallback (f);
-    }
+    void setAddressChangedCallback (std::function<bool (String)> f)                                                       { oscSettingsController.setAddressChangedCallback (f); }
+    void setDisplayedOSCAddress (String address)                                                                          { oscSettingsController.getView().getAddressEditor().setText (address); }
+    void setBundleAddressChangedCallback (std::function<void (String)> f)                                                 { oscSettingsController.setBundleAddressChangedCallback (f); }
+    void setDisplayedBundleAddress (String address)                                                                       { oscSettingsController.getView().getBundleAddressEditor().setText (address); }
 
-    void setAddressChangedCallback (std::function<bool (String)> f) { oscSettingsController.setAddressChangedCallback (f); }
+    void setFileDroppedCallback (std::function<void (File&)> f)                                                           { audioFileTransportController.setFileDroppedCallback (f); }
+    void toggleShowTransportControls (bool shouldShowControls)                                                            { audioFileTransportController.getView().setVisible (shouldShowControls); }
+    void setAudioTransportState (AudioFileTransportController::eAudioTransportState state)                                { audioFileTransportController.setAudioTransportState (state); }
+    void setPlayPressedCallback (std::function<void()> f)                                                                 { audioFileTransportController.setPlayPressedCallback (f); }
+    void setPausePressedCallback (std::function<void()> f)                                                                { audioFileTransportController.setPausePressedCallback (f); }
+    void setRestartPressedCallback (std::function<void()> f)                                                              { audioFileTransportController.setRestartPressedCallback (f); }
+    void setStopPressedCallback (std::function<void()> f)                                                                 { audioFileTransportController.setStopPressedCallback (f); }
 
-    void setDisplayedOSCAddress (String address)
-    {
-        oscSettingsController.getView().getAddressEditor().setText (address);
-    }
+    void clearAudioDisplayData()                                                                                          { audioScrollingDisplay.clear(); }
 
-    void setBundleAddressChangedCallback (std::function<void (String)> f) { oscSettingsController.setBundleAddressChangedCallback (f); }
-
-    void setDisplayedBundleAddress (String address)
-    {
-        oscSettingsController.getView().getBundleAddressEditor().setText (address);
-    }
-
-    void setFileDroppedCallback (std::function<void (File&)> f) { audioFileTransportController.setFileDroppedCallback (f); }
-
-    void toggleShowTransportControls (bool shouldShowControls)
-    {
-        audioFileTransportController.getView().setVisible (shouldShowControls);
-    }
-
-    void clearAudioDisplayData()
-    {
-        audioScrollingDisplay.clear();
-    }
-
-    void setAudioTransportState (AudioFileTransportController::eAudioTransportState state)
-    {
-        audioFileTransportController.setAudioTransportState (state);
-    }
-
-    void setPlayPressedCallback (std::function<void()> f)    { audioFileTransportController.setPlayPressedCallback (f); }
-    void setPausePressedCallback (std::function<void()> f)   { audioFileTransportController.setPausePressedCallback (f); }
-    void setRestartPressedCallback (std::function<void()> f) { audioFileTransportController.setRestartPressedCallback (f); }
-    void setStopPressedCallback (std::function<void()> f)    { audioFileTransportController.setStopPressedCallback (f); }
+    void featureTriggered (OSCFeatureAnalysisOutput::OSCFeatureType triggerType)                                          { featureListView.featureTriggered (triggerType); }
+    void setOnsetSensitivityCallback (std::function<void (float)> f)                                                      { featureListView.setOnsetSensitivityCallback (f); }
+    void setFeatureValueQueryCallback (std::function<float (OSCFeatureAnalysisOutput::OSCFeatureType)> f)                 { featureListView.setFeatureValueQueryCallback (f); }
+    
 private:
-    LiveScrollingAudioDisplay                   audioScrollingDisplay;
+    AudioVisualiserComponent                    audioScrollingDisplay;
     AudioFileTransportController                audioFileTransportController;
     ScopedPointer<AudioDeviceSelectorComponent> audioDeviceSelector;
     FeatureListModel                            featureListModel;

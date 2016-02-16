@@ -24,6 +24,7 @@ public:
     static float  getSettingsHeightRatio()                   noexcept { return 0.4f; }
     static int    getFeatureVisualiserTextHeight()           noexcept { return 10; }
     static int    getFeatureVisualiserGraphicWidth()         noexcept { return 2; }
+    static int    getTriggerFeatureVisualiserSquareSize()    noexcept { return 15; } 
     static int    getOSCSettingsWidth()                      noexcept { return 200; }
     static int    getOSCSettingsHeight()                     noexcept { return 150; }
     static int    getAudioTransportControlsWidth()           noexcept { return 200; }
@@ -34,6 +35,7 @@ public:
     static int    getVerticalMargin()                        noexcept { return 50; }
     static int    getHorizontalMargin()                      noexcept { return 30; }
     static int    getAnimationRateHz ()                      noexcept { return 60; }
+    static int    getSliderHeight()                          noexcept { return 20; }
     static float  getCornerSize()                            noexcept { return 4.0f; }
     static float  getLineThickness()                         noexcept { return 1.0f; }
     static Colour getTextColour()                            noexcept { return Colours::white; }
@@ -48,6 +50,14 @@ public:
         int height =           (int) (visualiserBounds.getHeight() * value);
         g.setColour            (Colours::green);
         g.fillRoundedRectangle (visualiserBounds.removeFromBottom (height).toFloat(), getCornerSize());
+    }
+
+    static void paintTriggerFeatureVisualiser (Graphics& g, Rectangle<int> visualiserBounds, float opacity)
+    {
+        g.setColour (Colours::green.withAlpha (opacity));
+        g.fillRoundedRectangle (visualiserBounds.toFloat(), getCornerSize());
+        g.setColour (Colours::white);
+        g.drawRoundedRectangle (visualiserBounds.toFloat(), getCornerSize(), getLineThickness());
     }
 
     void drawLabel (Graphics& g, Label& label) override

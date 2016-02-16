@@ -16,15 +16,17 @@ struct AudioAnalyser
 {
     struct SpectralCharacteristics
     {
-        SpectralCharacteristics (float sCentroid, float sSpread, float sFlatness)
+        SpectralCharacteristics (float sCentroid, float sSpread, float sFlatness, float sFlux)
         :   centroid (sCentroid),
             spread   (sSpread),
-            flatness (sFlatness)
+            flatness (sFlatness),
+            flux     (sFlux)
         {}
         
         float centroid;
         float spread;
         float flatness;
+        float flux;
     };
     
     struct HarmonicCharacteristics
@@ -112,6 +114,9 @@ struct AudioAnalyser
         analyseHarmonicCharacteristics (harmonicFeatures)
     {
         DBG("AudioAnalyser WindowSize: "<<windowSize);
+
+        for (int i = 0; i < windowSize / 2 + 1; i++)
+            previousBinMagnitudes.push_back (0.0);
     }
     
     void performSpectralAnalysis (ConcatenatedFeatureBuffer& features)
@@ -187,6 +192,7 @@ struct AudioAnalyser
                     features.setFeatureSample (ConcatenatedFeatureBuffer::Feature::Centroid, frame, characteristics.centroid, channel);
                     features.setFeatureSample (ConcatenatedFeatureBuffer::Feature::Spread, frame, characteristics.spread, channel);
                     features.setFeatureSample (ConcatenatedFeatureBuffer::Feature::Flatness, frame, characteristics.flatness, channel);
+                    features.setFeatureSample (ConcatenatedFeatureBuffer::Feature::Flux, frame, characteristics.flux, channel);
                     float slope = calculateNormalisedSpectralSlope (fftOut, channel);
                     features.setFeatureSample (ConcatenatedFeatureBuffer::Feature::Slope, frame, slope, channel);
                     features.setFFTBinsForSample (fftOut.getReadPointer (channel), channel, frame);
@@ -423,15 +429,25 @@ struct AudioAnalyser
         double varMagnitudeSum      = 0.0;
         double magnitudeSum         = 0.0;
         double magnitudeProduct     = 1.0;
-        
+        double flux                 = 0.0;
+
         std::vector<double> binCentreFrequencies((size_t)numBins);
         std::vector<double> binMagnitudes((size_t)numBins);
-        
+
+        jassert (previousBinMagnitudes.size() == binMagnitudes.size());
+
         for (size_t i = 0; i < numBins; ++i)
         {
             double binCentreFrequency = double(i) * frequencyRangePerBin + (frequencyRangePerBin / 2.0);
             binCentreFrequencies[i] = binCentreFrequency;
             double binMagnitude = (double) fftResults.getSample (channel, (int)i);
+            
+            /*flux*/
+            double diff = binMagnitude - previousBinMagnitudes[i];
+            if (diff > 0.0)
+                flux += diff;
+            ///////
+            
             binMagnitudes[i] = binMagnitude;
             
             magnitudeSum += binMagnitude;
@@ -441,7 +457,7 @@ struct AudioAnalyser
         
         double eps = 0.001;
         if (!(magnitudeSum > eps))
-            return {0.0f, 0.0f, 0.0f};
+            return {0.0f, 0.0f, 0.0f, 0.0f};
         float centroid = (float) (weightedMagnitudeSum / magnitudeSum);
         //        float scaledC = (float)(log2 (1.0 + 1023.0 * (centroid)) / 10.0);
         
@@ -450,10 +466,11 @@ struct AudioAnalyser
         for (size_t i = 0; i < numBins; ++i)
         {
             varMagnitudeSum += pow ((binCentreFrequencies[i] / nyquist) - (centroid / nyquist), 2.0) * binMagnitudes[i];
+            previousBinMagnitudes[i] = binMagnitudes[i];
         }
         float maxSpread = (float) ((centroid / nyquist) * (1.0 - (centroid / nyquist)));
         float spread = (float) ((varMagnitudeSum / magnitudeSum) / maxSpread);
-        return {centroid / (float)nyquist, spread, flatness};
+        return {centroid / (float)nyquist, spread, flatness, (float) flux};
     }
     
     void analyseNormalisedZeroCrosses (ConcatenatedFeatureBuffer& features)
@@ -580,13 +597,14 @@ struct AudioAnalyser
         fftOut.setSize (fftOut.getNumChannels(), samplesPerWindow / 2 + 1);
     }
 
-    double            nyquist;
-    double            previousF0;
-    AudioSampleBuffer fftIn;
-    AudioSampleBuffer fftOut;
-    FFT               fft;
-    bool              analyseSpectralCharacteristics;
-    bool              analyseHarmonicCharacteristics;
+    double              nyquist;
+    double              previousF0;
+    AudioSampleBuffer   fftIn;
+    AudioSampleBuffer   fftOut;
+    FFT                 fft;
+    std::vector<double> previousBinMagnitudes;
+    bool                analyseSpectralCharacteristics;
+    bool                analyseHarmonicCharacteristics;
     
 private:
     static float sumAccrossChannels (AudioSampleBuffer& buffer)

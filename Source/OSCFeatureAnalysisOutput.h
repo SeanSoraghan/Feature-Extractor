@@ -18,8 +18,7 @@ typedef ConcatenatedFeatureBuffer::Feature Feature;
 struct ValueHistory 
 {
     ValueHistory (int historyLength)
-    :   currentHistoryIndex (historyLength - 1),
-        recordedHistory (0)
+    :   recordedHistory (0)
     {
         history.clear();
         for (int i = 0; i < historyLength; i++)
@@ -30,22 +29,25 @@ struct ValueHistory
 
     float getTotal()
     {
-        float av = 0.0f;
+        float total = 0.0f;
         for (int i = 0; i < (int)history.size(); i++)
         {
-            av += history[i];
+            total += history[i];
         }
-        return av;
+        return total;
     }
-    
-    void updateHistoryIndex()
+
+    void insertNewValueAndupdateHistory (float newValue)
     {
-        currentHistoryIndex --;
-
-        if (currentHistoryIndex < 0)
-            currentHistoryIndex = (int)history.size() - 1;
-
-        if (recordedHistory < (int)history.size())
+        for (int i = 0; i < (int) history.size() - 1; i++)
+        {
+            history[i] = history[i + 1];
+        }
+        history[history.size() - 1] = newValue;
+        
+        //updateHistoryIndex();
+        
+        if (recordedHistory < (int) history.size())
             recordedHistory ++;
     }
 
@@ -61,16 +63,65 @@ struct ValueHistory
     }
 
     std::vector<float> history;
-    int currentHistoryIndex;
     int recordedHistory;
 };
+
+//==============================================================================
+//==============================================================================
+class OnsetDetector
+{
+public:
+    OnsetDetector()
+    :   spectralFluxHistory (3),
+        rmsHistory (3)
+    {}
+
+    void addSpectralFluxAndRMSValue (float sf, float rms)
+    {
+        spectralFluxHistory.insertNewValueAndupdateHistory (sf);
+        rmsHistory.insertNewValueAndupdateHistory (rms);
+    }
+
+    bool detectOnset()
+    {
+        if (spectralFluxHistory.recordedHistory < (int) spectralFluxHistory.history.size())
+            return false;
+
+        float meanSpectralFlux = spectralFluxHistory.getTotal() / spectralFluxHistory.recordedHistory;
+        
+        int onsetCandidteIndex = spectralFluxHistory.history.size() / 2;
+        float candidateSF      = spectralFluxHistory.history[onsetCandidteIndex];
+        float candidateRMS     = rmsHistory.history[onsetCandidteIndex];
+
+        for (int i = 0; i < (int) spectralFluxHistory.history.size(); i++)
+        {
+            if (i != onsetCandidteIndex)
+            {
+                float neighbourFlux = spectralFluxHistory.history[i];
+                float neighbourRMS  = rmsHistory.history[i];
+                if (neighbourFlux >= candidateSF || neighbourRMS >= candidateRMS)
+                    return false;
+            }
+        }
+
+        return candidateSF > meanSpectralFlux * meanThresholdMultiplier;
+    }
+
+    ValueHistory spectralFluxHistory;
+    ValueHistory rmsHistory;
+    float        meanThresholdMultiplier { 1.7f };
+};
+
+//==============================================================================
+//==============================================================================
 
 class OSCFeatureAnalysisOutput : private Timer
 {
 public:
     enum OSCFeatureType
     {
-        RMS = 0,
+        Onset = 0,
+        RMS,
         Centroid,
         Flatness,
         Spread,
@@ -81,10 +132,19 @@ public:
         NumFeatures
     };
 
+    static bool isTriggerFeature (OSCFeatureType oscf) 
+    {
+        if (oscf == Onset)
+            return true;
+
+        return false;
+    }
+
     static String getOSCFeatureName (OSCFeatureType f)
     {
         switch (f)
         {
+            case Onset:       return "Onset";
             case RMS:         return "RMS";
             case Centroid:    return "Centroid";
             case Slope:       return "Slope";
@@ -96,37 +156,10 @@ public:
         }
     }
 
-    static OSCFeatureType oscFeatureTypeFromFeature (ConcatenatedFeatureBuffer::Feature f)
-    {
-        typedef ConcatenatedFeatureBuffer::Feature Feature;
-        switch (f)
-        {
-            case Feature::Audio:
-                return OSCFeatureType::RMS;
-            case Feature::Centroid:
-                return OSCFeatureType::Centroid;
-            case Feature::Flatness:
-                return OSCFeatureType::Flatness;
-            case Feature::Spread:
-                return OSCFeatureType::Spread;
-            case Feature::Slope:
-                return OSCFeatureType::Slope;
-            case Feature::HER:
-                return OSCFeatureType::HER;
-            case Feature::Inharmonicity:
-                return OSCFeatureType::Inharmonicity;
-            case Feature::F0:
-                return OSCFeatureType::F0;
-            default:
-                jassertfalse;
-                return OSCFeatureType::NumFeatures;
-        }
-    }
-
     OSCFeatureAnalysisOutput (RealTimeAnalyser& rta)
     :   realTimeAudioFeatures (rta)
     {
-        for (int f = 0; f < OSCFeatureType::NumFeatures; f++)
+        for (int f = 1; f < OSCFeatureType::NumFeatures; f++)
         {
             if (f > (int) OSCFeatureType::Slope)                            //harmonic
                 featureHistories.push_back (ValueHistory (8));
@@ -149,6 +182,7 @@ public:
         float spread =   getRunningAverageAndUpdateHistory (Feature::Spread, OSCFeatureType::Spread);
         float slope =    getRunningAverageAndUpdateHistory (Feature::Slope, OSCFeatureType::Slope);
         float rmsLevel = getRunningAverageAndUpdateHistory (Feature::Audio, OSCFeatureType::RMS);
+        float onset =    detectOnset (rmsLevel); 
         if (sendHarmonicFeatures)
         {
             float f0     =  getRunningAverageAndUpdateHistory (Feature::F0, OSCFeatureType::F0);
@@ -160,12 +194,20 @@ public:
         }
         else
         {
-            sender.send (bundleAddress, rmsLevel, centroid, flatness, spread, slope);
+            if (onset == 1.0f && onsetDetectedCallback != nullptr)
+            {
+                onsetDetectedCallback();
+                DBG ("onset");
+                onsetDetector.spectralFluxHistory.printHistory();
+            }
+            sender.send (bundleAddress, onset, rmsLevel, centroid, flatness, spread, slope);
         }
     }
 
     float getRunningAverage (OSCFeatureType oscf)
     {
+        jassert (oscf != OSCFeatureType::Onset);
+
         ValueHistory rms = featureHistories[OSCFeatureType::RMS];
         float rmsAverage = rms.getTotal() / (float) rms.recordedHistory;
         if (rmsAverage > 0.01f)
@@ -176,8 +218,18 @@ public:
         return 0.0f;
     }
 
+    float detectOnset (float rms)
+    {
+        float currentValue = realTimeAudioFeatures.getSpectralFeatures().getAverageFeatureSample (Feature::Flux, 0);
+        onsetDetector.addSpectralFluxAndRMSValue (currentValue, rms);
+        return onsetDetector.detectOnset() ? 1.0f : 0.0f;
+    }
+
     float getRunningAverageAndUpdateHistory (Feature f, OSCFeatureType oscf)
     {
+        /* use detectOnset() for onsets */
+        jassert (oscf != OSCFeatureType::Onset);
+        
         float currentValue = 0.0f;
 
         if (oscf == OSCFeatureType::RMS)
@@ -186,18 +238,11 @@ public:
             currentValue = realTimeAudioFeatures.getSpectralFeatures().getAverageFeatureSample (f, 0);
         else
             currentValue = realTimeAudioFeatures.getHarmonicFeatures().getAverageFeatureSample (f, 0);
-
+        
         ValueHistory& h = featureHistories[oscf];
-        //float rms = featureHistories[OSCFeatureType::RMS].history[featureHistories[OSCFeatureType::RMS].currentHistoryIndex];
-        //float lastValue = h.history[h.currentHistoryIndex];
-        //float diff = currentValue - lastValue;
-        //float weightedDiff = diff;
-        //if (oscf != OSCFeatureType::F0 && oscf != OSCFeatureType::RMS)
-           // weightedDiff = (1.0f - (float) log10 ((double) (((1.0f - diff) * 9.0f) + 1.0f))) * jlimit (0.0f, 1.0f, rms);
-        //float augmentedValue = lastValue + weightedDiff;
+
         float returnValue = (h.getTotal() + currentValue) / (h.recordedHistory + 1);
-        h.history[h.currentHistoryIndex] = returnValue;
-        h.updateHistoryIndex();
+        h.insertNewValueAndupdateHistory (returnValue);
         return returnValue;
     }
 
@@ -224,9 +269,17 @@ public:
         }
     }
 
+    void setOnsetDetectionSensitivity (float s)
+    {
+        jassert (s >= 0.0f && s <= 1.0f);
+        onsetDetector.meanThresholdMultiplier = 1.0f + s;
+    }
+
     RealTimeAnalyser&         realTimeAudioFeatures;
     OSCSender                 sender;
+    OnsetDetector             onsetDetector;
     std::vector<ValueHistory> featureHistories;
+    std::function<void()>     onsetDetectedCallback;
     String                    address;
     String bundleAddress      { String("/Audio/Features") };
 };

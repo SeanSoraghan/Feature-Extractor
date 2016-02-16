@@ -18,12 +18,12 @@ class RealTimeAnalyser : private Timer
 public:
     RealTimeAnalyser (AudioDataCollector& adc, double sampleRate = 48000.0)
     :   audioDataCollector (adc),
-        audioAnalyserSpec (/*state.currentSamplesPerBlock*/256, 
+        audioAnalyserSpec (/*state.currentSamplesPerBlock*/512, 
                            2, 
                            sampleRate / 2.0,
                            true,
                            false),
-        audioAnalyserHarm (256 * 8,
+        audioAnalyserHarm (512 * 8,
                            2,
                            sampleRate / 2.0,
                            false,
@@ -98,13 +98,7 @@ private:
         {
             audioAnalyserSpec.performSpectralAnalysis (spectralFeatures);
             //audioAnalyser.analyseNormalisedZeroCrosses (features);
-            spectralFeatures.normaliseAudioChannels();
-        }
-
-        if (harmonicFeatures.audioOutput.getNumSamples() > 0)
-        {
-            audioAnalyserHarm.performSpectralAnalysis (harmonicFeatures);
-            harmonicFeatures.normaliseAudioChannels();
+            //spectralFeatures.normaliseAudioChannels();
         }
     }
 
