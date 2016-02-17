@@ -20,7 +20,7 @@ class AudioDataCollector : public AudioIODeviceCallback
 public:
     AudioDataCollector() 
     {
-        circleBuffer.setSize (2, 4096);
+        circleBuffer.setSize (1, 4096);
         circleBuffer.clear();
     }
 
@@ -43,7 +43,9 @@ public:
             if (writeIndex + numberOfSamples <= circleBuffer.getNumSamples())
             {
                 circleBuffer.copyFrom (0, writeIndex, channelData[0], numberOfSamples);
-                circleBuffer.copyFrom (1, writeIndex, channelData[1], numberOfSamples);
+                //circleBuffer.copyFrom (1, writeIndex, channelData[1], numberOfSamples);
+
+                //circleBuffer.copyFrom (0, writeIndex, channelData[1], numberOfSamples);
             }
             else
             {
@@ -51,7 +53,10 @@ public:
                 {
                     const int modIndex = (index + writeIndex) % circleBuffer.getNumSamples();
                     circleBuffer.setSample (0, modIndex, channelData[0][index]);
-                    circleBuffer.setSample (1, modIndex, channelData[1][index]);
+                    //circleBuffer.setSample (1, modIndex, channelData[1][index]);
+
+
+                    //circleBuffer.setSample (0, modIndex, channelData[1][index]);
                 }
             }
         
@@ -66,7 +71,7 @@ public:
     {
         AudioSampleBuffer buffer = AudioSampleBuffer();
         buffer.clear();
-        buffer.setSize (2, numSamplesRequired);
+        buffer.setSize (1, numSamplesRequired);
 
         while (analysisBufferUpdating.get() == 1) {}
         if (analysisBufferUpdating.get() != 1)
@@ -76,7 +81,7 @@ public:
             if (spectralReadPosition + numSamplesRequired <= circleBuffer.getNumSamples())
             {
                 buffer.copyFrom (0, 0, circleBuffer, 0, spectralReadPosition, numSamplesRequired);
-                buffer.copyFrom (1, 0, circleBuffer, 1, spectralReadPosition, numSamplesRequired);
+                //buffer.copyFrom (1, 0, circleBuffer, 1, spectralReadPosition, numSamplesRequired);
             }
             else
             {
@@ -84,7 +89,7 @@ public:
                 {
                     const int modIndex = (index + spectralReadPosition) % circleBuffer.getNumSamples();
                     buffer.setSample (0, index, circleBuffer.getReadPointer (0)[modIndex]);
-                    buffer.setSample (1, index, circleBuffer.getReadPointer (1)[modIndex]);
+                    //buffer.setSample (1, index, circleBuffer.getReadPointer (1)[modIndex]);
                 }
             }
             updateSpectralBufferVisualiser (buffer);

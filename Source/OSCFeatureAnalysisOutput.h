@@ -20,11 +20,7 @@ struct ValueHistory
     ValueHistory (int historyLength)
     :   recordedHistory (0)
     {
-        history.clear();
-        for (int i = 0; i < historyLength; i++)
-        {
-            history.push_back (0.0f);
-        }
+        setHistoryLength (historyLength);
     }
 
     float getTotal()
@@ -51,6 +47,16 @@ struct ValueHistory
             recordedHistory ++;
     }
 
+    void setHistoryLength (int historyLength)
+    {
+        recordedHistory = 0;
+        history.clear();
+        for (int i = 0; i < historyLength; i++)
+        {
+            history.push_back (0.0f);
+        }
+    }
+
     void printHistory()
     {
         String h (String::empty);
@@ -71,45 +77,105 @@ struct ValueHistory
 class OnsetDetector
 {
 public:
+    enum eOnsetDetectionType
+    {
+        enSpectral = 0,
+        enAmplitude,
+        enCombination,
+        enNumTypes
+    };
+
+    static String getStringForDetectionType (eOnsetDetectionType t)
+    {
+        switch (t)
+        {
+            case enSpectral:
+                return String ("Spectral");
+            case enAmplitude:
+                return String ("Amplitude");
+            case enCombination:
+                return String ("Combination");
+            default:
+                jassertfalse;
+                return String ("UNKNOWN");
+        }
+    }
+
     OnsetDetector()
-    :   spectralFluxHistory (3),
-        rmsHistory (3)
+    :   spectralFluxHistory (5),
+        ampHistory          (5),
+        type                (enAmplitude)
     {}
 
-    void addSpectralFluxAndRMSValue (float sf, float rms)
+    void addSpectralFluxAndAmpValue (float sf, float amp)
     {
         spectralFluxHistory.insertNewValueAndupdateHistory (sf);
-        rmsHistory.insertNewValueAndupdateHistory (rms);
+        ampHistory.insertNewValueAndupdateHistory (amp);
     }
 
     bool detectOnset()
     {
-        if (spectralFluxHistory.recordedHistory < (int) spectralFluxHistory.history.size())
+        jassert (ampHistory.history.size() == spectralFluxHistory.history.size());
+        //avoid division by 0
+        if (ampHistory.recordedHistory == 0 || spectralFluxHistory.recordedHistory == 0)
+            return false;
+
+        if (spectralFluxHistory.recordedHistory < (int) spectralFluxHistory.history.size()
+            || ampHistory.recordedHistory < (int) ampHistory.history.size())
             return false;
 
         float meanSpectralFlux = spectralFluxHistory.getTotal() / spectralFluxHistory.recordedHistory;
+        float meanAmp          = ampHistory.getTotal() / ampHistory.recordedHistory;
         
-        int onsetCandidteIndex = spectralFluxHistory.history.size() / 2;
+        int onsetCandidteIndex = spectralFluxHistory.history.size() - 1;
+
+        if (type == enSpectral || type == enCombination)
+            onsetCandidteIndex = spectralFluxHistory.history.size() / 2;
+
         float candidateSF      = spectralFluxHistory.history[onsetCandidteIndex];
-        float candidateRMS     = rmsHistory.history[onsetCandidteIndex];
+        float candidateAmp     = ampHistory.history[onsetCandidteIndex];
+
+        float ampThreshold = 0.01f;
+       
+        if (candidateAmp < ampThreshold)
+            return false;
 
         for (int i = 0; i < (int) spectralFluxHistory.history.size(); i++)
         {
             if (i != onsetCandidteIndex)
             {
                 float neighbourFlux = spectralFluxHistory.history[i];
-                float neighbourRMS  = rmsHistory.history[i];
-                if (neighbourFlux >= candidateSF || neighbourRMS >= candidateRMS)
+                float neighbourAmp  = ampHistory.history[i];
+
+                if (neighbourAmp >= candidateAmp && (type == enAmplitude || type == enCombination))
+                    return false;
+
+                if (neighbourFlux >= candidateSF && (type == enSpectral || type == enCombination))
                     return false;
             }
         }
 
-        return candidateSF > meanSpectralFlux * meanThresholdMultiplier;
+        bool onsetSpectral  = candidateSF  > meanSpectralFlux * meanThresholdMultiplier;
+        bool onsetAmplitude = candidateAmp > meanAmp * meanThresholdMultiplier;
+
+        switch (type)
+        {
+            case enAmplitude:
+                return onsetAmplitude;
+            case enSpectral:
+                return onsetSpectral;
+            case enCombination:
+                return onsetAmplitude && onsetSpectral;
+            default:
+                jassertfalse;
+                return false;
+        }
     }
 
-    ValueHistory spectralFluxHistory;
-    ValueHistory rmsHistory;
-    float        meanThresholdMultiplier { 1.7f };
+    ValueHistory        spectralFluxHistory;
+    ValueHistory        ampHistory;
+    eOnsetDetectionType type;
+    float               meanThresholdMultiplier { 1.7f };
 };
 
 //==============================================================================
@@ -182,7 +248,7 @@ public:
         float spread =   getRunningAverageAndUpdateHistory (Feature::Spread, OSCFeatureType::Spread);
         float slope =    getRunningAverageAndUpdateHistory (Feature::Slope, OSCFeatureType::Slope);
         float rmsLevel = getRunningAverageAndUpdateHistory (Feature::Audio, OSCFeatureType::RMS);
-        float onset =    detectOnset (rmsLevel); 
+        float onset =    detectOnset (); 
         if (sendHarmonicFeatures)
         {
             float f0     =  getRunningAverageAndUpdateHistory (Feature::F0, OSCFeatureType::F0);
@@ -218,10 +284,15 @@ public:
         return 0.0f;
     }
 
-    float detectOnset (float rms)
+    float detectOnset ()
     {
         float currentValue = realTimeAudioFeatures.getSpectralFeatures().getAverageFeatureSample (Feature::Flux, 0);
-        onsetDetector.addSpectralFluxAndRMSValue (currentValue, rms);
+        
+        /* RMS or magnitude? */
+        float amp = realTimeAudioFeatures.getSpectralFeatures().getMaxAmplitude();
+        //float amp = realTimeAudioFeatures.getSpectralFeatures().getAverageRMSLevel();
+        //
+        onsetDetector.addSpectralFluxAndAmpValue (currentValue, amp);
         return onsetDetector.detectOnset() ? 1.0f : 0.0f;
     }
 
@@ -271,9 +342,17 @@ public:
 
     void setOnsetDetectionSensitivity (float s)
     {
-        jassert (s >= 0.0f && s <= 1.0f);
+        jassert (s >= 0.0f);
         onsetDetector.meanThresholdMultiplier = 1.0f + s;
     }
+
+    void setOnsetWindowLength (int length)
+    {
+        onsetDetector.ampHistory.setHistoryLength          (length);
+        onsetDetector.spectralFluxHistory.setHistoryLength (length);
+    }
+
+    void setOnsetDetectionType (OnsetDetector::eOnsetDetectionType t) { onsetDetector.type = t; }
 
     RealTimeAnalyser&         realTimeAudioFeatures;
     OSCSender                 sender;

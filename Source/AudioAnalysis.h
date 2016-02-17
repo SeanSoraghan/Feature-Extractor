@@ -443,9 +443,10 @@ struct AudioAnalyser
             double binMagnitude = (double) fftResults.getSample (channel, (int)i);
             
             /*flux*/
-            double diff = binMagnitude - previousBinMagnitudes[i];
+            double diff = abs(binMagnitude) - abs(previousBinMagnitudes[i]);
+            double rectifiedDiff = (diff + abs(diff)) / 2.0;
             if (diff > 0.0)
-                flux += diff;
+                flux += rectifiedDiff;
             ///////
             
             binMagnitudes[i] = binMagnitude;

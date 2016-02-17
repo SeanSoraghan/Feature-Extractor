@@ -76,11 +76,13 @@ public:
                                             view.setAudioTransportState (AudioFileTransportController::eAudioTransportState::enNoFileSelected);
                                     } );
 
-        view.setOnsetSensitivityCallback ([this] (float s) {oscFeatureSender.setOnsetDetectionSensitivity (s); });
-        view.setPlayPressedCallback      ([this] ()        { audioFilePlayer.play(); audioDataCollector.clearBuffer(); });
-        view.setPausePressedCallback     ([this] ()        { audioFilePlayer.pause(); audioDataCollector.clearBuffer(); });
-        view.setStopPressedCallback      ([this] ()        { audioFilePlayer.stop(); audioDataCollector.clearBuffer(); });
-        view.setRestartPressedCallback   ([this] ()        { audioFilePlayer.restart(); });
+        view.setOnsetSensitivityCallback   ([this] (float s)                              { oscFeatureSender.setOnsetDetectionSensitivity (s); });
+        view.setOnsetWindowSizeCallback    ([this] (int s)                                { oscFeatureSender.setOnsetWindowLength (s); });
+        view.setOnsetDetectionTypeCallback ([this] (OnsetDetector::eOnsetDetectionType t) { oscFeatureSender.setOnsetDetectionType (t); });
+        view.setPlayPressedCallback        ([this] ()                                     { audioFilePlayer.play(); audioDataCollector.clearBuffer(); });
+        view.setPausePressedCallback       ([this] ()                                     { audioFilePlayer.pause(); audioDataCollector.clearBuffer(); });
+        view.setStopPressedCallback        ([this] ()                                     { audioFilePlayer.stop(); audioDataCollector.clearBuffer(); });
+        view.setRestartPressedCallback     ([this] ()                                     { audioFilePlayer.restart(); });
 
         view.setAddressChangedCallback       ([this] (String address) { return oscFeatureSender.connectToAddress (address); });
         view.setBundleAddressChangedCallback ([this] (String address) { oscFeatureSender.bundleAddress = address; });

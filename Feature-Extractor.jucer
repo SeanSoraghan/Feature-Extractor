@@ -45,9 +45,9 @@
     <VS2015 targetFolder="Builds/VisualStudio2015">
       <CONFIGURATIONS>
         <CONFIGURATION name="Debug" winWarningLevel="4" generateManifest="1" winArchitecture="32-bit"
-                       isDebug="1" optimisation="1" targetName="Feature-Extractor"/>
+                       isDebug="1" optimisation="1" targetName="Feature-Extractor" headerPath="../../ASIOSDK2.3/common/"/>
         <CONFIGURATION name="Release" winWarningLevel="4" generateManifest="1" winArchitecture="32-bit"
-                       isDebug="0" optimisation="3" targetName="Feature-Extractor"/>
+                       isDebug="0" optimisation="3" targetName="Feature-Extractor" headerPath="../../ASIOSDK2.3/common/"/>
       </CONFIGURATIONS>
       <MODULEPATHS>
         <MODULEPATH id="juce_core" path="../equator-2/JUCE/modules"/>
@@ -110,5 +110,5 @@
     <MODULE id="juce_osc" showAllCode="1" useLocalCopy="0"/>
     <MODULE id="juce_video" showAllCode="1" useLocalCopy="0"/>
   </MODULES>
-  <JUCEOPTIONS/>
+  <JUCEOPTIONS JUCE_ASIO="enabled"/>
 </JUCERPROJECT>

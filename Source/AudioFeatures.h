@@ -274,6 +274,17 @@ public:
         return av;
     }
 
+    float getMaxAmplitude ()
+    {
+        float magnitude = 0.0f;
+
+        for (int c = 0; c < numFeatureChannels; c++)
+            if (audioOutput.getMagnitude (c, 0, audioOutput.getNumSamples()) > magnitude)
+                magnitude = audioOutput.getMagnitude (c, 0, audioOutput.getNumSamples());
+
+        return magnitude;
+    }
+
     float getAverageRMSLevel()
     {
         float av = 0.0f;

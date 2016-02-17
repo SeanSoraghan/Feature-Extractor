@@ -120,53 +120,110 @@ private:
 //================================================================================
 //================================================================================
  class TriggerFeatureView : public Component,
-                            public Slider::Listener
+                            public Slider::Listener,
+                            public ComboBoxListener
 {
 public:
     TriggerFeatureView (OSCFeatureAnalysisOutput::OSCFeatureType f) 
     :   visualiser (f) ,
-        sensitivityLabel ("Sensitivity", "Sensitivity")
+        sensitivityLabel  ("Sensitivity", "Sensitivity"),
+        windowLengthLabel ("Window Length", "Window Length"),
+        typeLabel         ("Type", "Detection Type")
     {
-        sensitivitySlider.setRange (0.0, 1.0, 0.01);
-        sensitivitySlider.setName  ("Sensitivity");
+        sensitivityLabel.setJustificationType  (Justification::centred);
+        windowLengthLabel.setJustificationType (Justification::centred);
+        typeLabel.setJustificationType         (Justification::centred);
+        sensitivitySlider.setRange (0.0, 3.0, 0.01);
         sensitivitySlider.addListener (this);
-        addAndMakeVisible (visualiser);
-        addAndMakeVisible (sensitivitySlider);
         sensitivitySlider.setDoubleClickReturnValue (true, 0.5);
         sensitivitySlider.setValue (0.5);
         sensitivitySlider.setSliderStyle (Slider::SliderStyle::LinearBar);
-        //sensitivitySlider.setTextBoxStyle (Slider::TextEntryBoxPosition::NoTextBox, true, 0, 0);
+
+        fillComboBoxIDs();
+        typeComboBox.setSelectedId (getIDForDetectionType (OnsetDetector::enAmplitude));
+        typeComboBox.addListener (this);
+
+        windowLengthSlider.setRange (3.0, 21.0, 2.0);
+        windowLengthSlider.addListener (this);
+        windowLengthSlider.setDoubleClickReturnValue (true, 0.5);
+        windowLengthSlider.setValue (3.0);
+        windowLengthSlider.setSliderStyle (Slider::SliderStyle::LinearBar);
+
+        addAndMakeVisible (visualiser);
+        addAndMakeVisible (sensitivitySlider);
+        addAndMakeVisible (windowLengthSlider);
+        addAndMakeVisible (typeComboBox);
         addAndMakeVisible (sensitivityLabel);
+        addAndMakeVisible (windowLengthLabel);
+        addAndMakeVisible (typeLabel);
     }
 
     void resized() override
     {
         auto localBounds = getLocalBounds();
-        const auto sliderBounds = localBounds.removeFromBottom (FeatureExtractorLookAndFeel::getSliderHeight());
-        sensitivitySlider.setBounds (sliderBounds.reduced (FeatureExtractorLookAndFeel::getHorizontalMargin(), 0));
-        sensitivityLabel.setBounds  (localBounds.removeFromBottom (FeatureExtractorLookAndFeel::getSliderHeight())
+        sensitivitySlider.setBounds (localBounds.removeFromBottom (FeatureExtractorLookAndFeel::getSliderHeight())
                                                 .reduced (FeatureExtractorLookAndFeel::getHorizontalMargin(), 0));
-        visualiser.setBounds        (localBounds);
+        sensitivityLabel.setBounds  (localBounds.removeFromBottom (FeatureExtractorLookAndFeel::getSliderHeight())
+                                                .reduced (FeatureExtractorLookAndFeel::getHorizontalMargin() / 2, 0));
+        windowLengthSlider.setBounds (localBounds.removeFromBottom (FeatureExtractorLookAndFeel::getSliderHeight())
+                                                 .reduced (FeatureExtractorLookAndFeel::getHorizontalMargin(), 0));
+        windowLengthLabel.setBounds  (localBounds.removeFromBottom (FeatureExtractorLookAndFeel::getSliderHeight())
+                                                 .reduced (FeatureExtractorLookAndFeel::getHorizontalMargin() / 2, 0));
+        typeComboBox.setBounds       (localBounds.removeFromBottom (FeatureExtractorLookAndFeel::getSliderHeight())
+                                                 .reduced (FeatureExtractorLookAndFeel::getHorizontalMargin(), 0));
+        typeLabel.setBounds          (localBounds.removeFromBottom (FeatureExtractorLookAndFeel::getSliderHeight())
+                                                 .reduced (FeatureExtractorLookAndFeel::getHorizontalMargin() / 2, 0));
+        localBounds.removeFromBottom (FeatureExtractorLookAndFeel::getVerticalMargin() / 2);
+        visualiser.setBounds         (localBounds);
     }
 
-    virtual void sliderValueChanged (Slider* slider) override
+    void sliderValueChanged (Slider* slider) override
     {
         if (slider == &sensitivitySlider)
             if (sensitivityChanged != nullptr)
                 sensitivityChanged ((float) slider->getValue());
+        if (slider == &windowLengthSlider)
+            if (windowLengthChanged != nullptr)
+                windowLengthChanged ((int) slider->getValue());
     }
 
+    void comboBoxChanged (ComboBox* box) override
+    {
+        if (box == &typeComboBox)
+            if (typeChanged != nullptr)
+                typeChanged (getDetectionTypeForID (box->getSelectedId()));
+    }
+
+    void fillComboBoxIDs()
+    {
+        for (int type = 0; type < (int) OnsetDetector::enNumTypes; type++)
+        {
+            OnsetDetector::eOnsetDetectionType t = (OnsetDetector::eOnsetDetectionType) type;
+            typeComboBox.addItem (OnsetDetector::getStringForDetectionType (t), getIDForDetectionType (t));
+        }
+    }
+
+    static int getIDForDetectionType (OnsetDetector::eOnsetDetectionType t) { return (int) t + 1; }
+    static OnsetDetector::eOnsetDetectionType getDetectionTypeForID (int t) { return (OnsetDetector::eOnsetDetectionType) (t - 1); }
+    
     void featureTriggered() { visualiser.featureTriggered(); }
 
     OSCFeatureAnalysisOutput::OSCFeatureType getFeatureType() { return visualiser.featureType; }
 
-    void setSensitivityChangedCallback (std::function<void (float)> f) { sensitivityChanged = f; }
-
+    void setSensitivityChangedCallback (std::function<void (float)> f)                              { sensitivityChanged  = f; }
+    void setWindowLengthCallback       (std::function<void (int)> f)                                { windowLengthChanged = f; }
+    void setTypeCallback               (std::function<void (OnsetDetector::eOnsetDetectionType)> f) { typeChanged = f; }
 private:
-    std::function<void (float)> sensitivityChanged;
+    std::function<void (float)>                              sensitivityChanged;
+    std::function<void (int)>                                windowLengthChanged;
+    std::function<void (OnsetDetector::eOnsetDetectionType)> typeChanged;
     TriggerFeatureVisualiser visualiser;
+    ComboBox                 typeComboBox;
     Slider                   sensitivitySlider;
+    Slider                   windowLengthSlider;
     Label                    sensitivityLabel;
+    Label                    windowLengthLabel;
+    Label                    typeLabel;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TriggerFeatureView)
 };
@@ -236,6 +293,21 @@ public:
             if (triggerFeatureView->getFeatureType() == OSCFeatureAnalysisOutput::OSCFeatureType::Onset)
                 triggerFeatureView->setSensitivityChangedCallback (f);
     }
+
+    void setOnsetWindowLengthCallback (std::function<void (int)> f)
+    {
+        for (auto triggerFeatureView : triggerFeatureViews)
+            if (triggerFeatureView->getFeatureType() == OSCFeatureAnalysisOutput::OSCFeatureType::Onset)
+                triggerFeatureView->setWindowLengthCallback (f);
+    }
+
+    void setOnsetDetectionTypeCallback (std::function<void (OnsetDetector::eOnsetDetectionType)> f)
+    {
+        for (auto triggerFeatureView : triggerFeatureViews)
+            if (triggerFeatureView->getFeatureType() == OSCFeatureAnalysisOutput::OSCFeatureType::Onset)
+                triggerFeatureView->setTypeCallback (f);
+    }
+
 private:
     OwnedArray<FeatureVisualiser>                                   featureVisualisers;
     OwnedArray<TriggerFeatureView>                                  triggerFeatureViews;

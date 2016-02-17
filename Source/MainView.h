@@ -19,7 +19,7 @@ class MainView : public Component
 {
 public:
     MainView ()
-    :   audioScrollingDisplay (2),
+    :   audioScrollingDisplay (1),
         featureListView       (featureListModel)
     {
         setLookAndFeel (SharedResourcePointer<FeatureExtractorLookAndFeel>());
@@ -105,7 +105,9 @@ public:
     void clearAudioDisplayData()                                                                                          { audioScrollingDisplay.clear(); }
 
     void featureTriggered (OSCFeatureAnalysisOutput::OSCFeatureType triggerType)                                          { featureListView.featureTriggered (triggerType); }
-    void setOnsetSensitivityCallback (std::function<void (float)> f)                                                      { featureListView.setOnsetSensitivityCallback (f); }
+    void setOnsetSensitivityCallback   (std::function<void (float)> f)                                                    { featureListView.setOnsetSensitivityCallback (f); }
+    void setOnsetWindowSizeCallback    (std::function<void (int)> f)                                                      { featureListView.setOnsetWindowLengthCallback (f); }
+    void setOnsetDetectionTypeCallback (std::function<void (OnsetDetector::eOnsetDetectionType)> f)                       { featureListView.setOnsetDetectionTypeCallback (f); }
     void setFeatureValueQueryCallback (std::function<float (OSCFeatureAnalysisOutput::OSCFeatureType)> f)                 { featureListView.setFeatureValueQueryCallback (f); }
     
 private:
