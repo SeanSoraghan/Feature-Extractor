@@ -51,18 +51,20 @@ public:
                                                    });
 
         //switches between listening to input or output
-        view.setAudioSourceTypeChangedCallback ([this] (AudioSourceSelectorController::eAudioSourceType type) 
+        view.setAudioSourceTypeChangedCallback ([this] (eAudioSourceType type) 
                                                         { 
-                                                            bool input = type == AudioSourceSelectorController::enIncomingAudio;
+                                                            bool input = type == eAudioSourceType::enIncomingAudio;
                                                            
                                                             if (input)
                                                                 audioFilePlayer.stop();
                                                             
                                                             audioDataCollector.toggleCollectInput (input);
-                                                            view.toggleShowTransportControls (type == AudioSourceSelectorController::enAudioFile);
+                                                            view.toggleShowTransportControls (type == eAudioSourceType::enAudioFile);
                                                             view.clearAudioDisplayData();
                                                         }
                                                 );
+
+        view.setChannelTypeChangedCallback ([this] (eChannelType t) { audioDataCollector.setChannelToCollect ((int) t); });
         
         view.setFileDroppedCallback ([this] (File& f) 
                                     { 

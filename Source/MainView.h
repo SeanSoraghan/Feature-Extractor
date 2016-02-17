@@ -19,8 +19,10 @@ class MainView : public Component
 {
 public:
     MainView ()
-    :   audioScrollingDisplay (1),
-        featureListView       (featureListModel)
+    :   audioScrollingDisplay             (1),
+        featureListView                   (featureListModel),
+        audioSourceTypeSelectorController (getAudioSourceTypeString),
+        channelTypeSelector               (getChannelTypeString)
     {
         setLookAndFeel (SharedResourcePointer<FeatureExtractorLookAndFeel>());
         
@@ -44,6 +46,7 @@ public:
         audioFileTransportController.getView().setVisible (false);
 
         addAndMakeVisible (audioSourceTypeSelectorController.getSelector());
+        addAndMakeVisible (channelTypeSelector.getSelector());
     }
 
     void resized() override
@@ -73,10 +76,11 @@ public:
         oscSettingsController.getView().setBounds (settingsBounds.removeFromLeft (panelWidth));
 
         auto displayBounds = audioScrollingDisplay.getBounds();
-        auto selectorBounds = displayBounds.removeFromLeft (FeatureExtractorLookAndFeel::getAudioSourceTypeSelectorWidth())
-                                           .removeFromTop  (FeatureExtractorLookAndFeel::getAudioSourceTypeSelectorHeight());
-
-        audioSourceTypeSelectorController.getSelector().setBounds (selectorBounds);
+        auto selectorBounds = displayBounds.removeFromTop  (FeatureExtractorLookAndFeel::getAudioSourceTypeSelectorHeight());
+        auto audioSourceSelectorBounds = selectorBounds.removeFromLeft (FeatureExtractorLookAndFeel::getAudioSourceTypeSelectorWidth());
+        auto channelSelectorBounds = selectorBounds.removeFromRight (FeatureExtractorLookAndFeel::getAudioSourceTypeSelectorWidth());
+        audioSourceTypeSelectorController.getSelector().setBounds (audioSourceSelectorBounds);
+        channelTypeSelector.getSelector().setBounds (channelSelectorBounds);
     }
 
     AudioVisualiserComponent& getAudioDisplayComponent() { return audioScrollingDisplay; }
@@ -87,8 +91,8 @@ public:
         resized();
     }
 
-    void setAudioSourceTypeChangedCallback (std::function<void (AudioSourceSelectorController::eAudioSourceType type)> f) { audioSourceTypeSelectorController.setAudioSourceTypeChangedCallback (f); }
-
+    void setAudioSourceTypeChangedCallback (std::function<void (eAudioSourceType type)> f) { audioSourceTypeSelectorController.setAudioSourceTypeChangedCallback (f); }
+    void setChannelTypeChangedCallback     (std::function<void (eChannelType)> f)          { channelTypeSelector.setAudioSourceTypeChangedCallback (f); }
     void setAddressChangedCallback (std::function<bool (String)> f)                                                       { oscSettingsController.setAddressChangedCallback (f); }
     void setDisplayedOSCAddress (String address)                                                                          { oscSettingsController.getView().getAddressEditor().setText (address); }
     void setBundleAddressChangedCallback (std::function<void (String)> f)                                                 { oscSettingsController.setBundleAddressChangedCallback (f); }
@@ -117,7 +121,8 @@ private:
     FeatureListModel                            featureListModel;
     FeatureListView                             featureListView;
     OSCSettingsController                       oscSettingsController;
-    AudioSourceSelectorController               audioSourceTypeSelectorController;
+    AudioSourceSelectorController<>             audioSourceTypeSelectorController;
+    AudioSourceSelectorController<eChannelType> channelTypeSelector;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainView)
 };
 

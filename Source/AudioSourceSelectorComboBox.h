@@ -11,44 +11,67 @@
 #ifndef AUDIOSOURCESELECTORCOMBOBOX_H_INCLUDED
 #define AUDIOSOURCESELECTORCOMBOBOX_H_INCLUDED
 
+enum eAudioSourceType
+{
+    enIncomingAudio = 0,
+    enAudioFile,
+    enNumSourceTypes
+};
+
+static String getAudioSourceTypeString (eAudioSourceType type)
+{
+    switch (type)
+    {
+    case enIncomingAudio:
+        return String ("Analyse incoming audio");
+    case enAudioFile:
+        return String ("Analyse audio file");
+    default:
+        jassertfalse;
+        return ("UNKNOWN");
+    }
+}
+
+enum eChannelType
+{
+    enLeft = 0,
+    enRight,
+    enNumChannels
+};
+
+static String getChannelTypeString (eChannelType type)
+{
+    switch (type)
+    {
+    case enLeft:
+        return String ("Analyse left channel");
+    case enRight:
+        return String ("Analyse right channel");
+    default:
+        jassertfalse;
+        return ("UNKNOWN");
+    }
+}
+
+template <class EnumType = eAudioSourceType>
 class AudioSourceSelectorController : ComboBox::Listener
 {
 public:
-    enum eAudioSourceType
-    {
-        enIncomingAudio = 0,
-        enAudioFile,
-        enNumSourceTypes
-    };
-
-    static String getAudioSourceTypeString (eAudioSourceType type)
-    {
-        switch (type)
-        {
-        case enIncomingAudio:
-            return String ("Analyse incoming audio");
-        case enAudioFile:
-            return String ("Analyse audio file");
-        default:
-            jassertfalse;
-            return ("UNKNOWN");
-        }
-    }
-
-    static int getComboBoxIDForAudioSourceType (eAudioSourceType type)
+    static int getComboBoxIDForAudioSourceType (EnumType type)
     {
         return (int) type + 1;
     }
 
-    static eAudioSourceType getAudioSourceTypeForComboBoxID (int iD)
+    static EnumType getAudioSourceTypeForComboBoxID (int iD)
     {
-        return (eAudioSourceType) (iD - 1);
+        return (EnumType) (iD - 1);
     }
 
-    AudioSourceSelectorController()
+    AudioSourceSelectorController (std::function<String (EnumType)> getSourceTypeFunction)
+    :   getSourceTypeString (getSourceTypeFunction)
     {
         fillComboBoxSelections();
-        selectorComboBox.setSelectedId (getComboBoxIDForAudioSourceType (enIncomingAudio));
+        selectorComboBox.setSelectedId (1);
         selectorComboBox.addListener (this);
     }
 
@@ -61,7 +84,7 @@ public:
     {
         if (comboBoxThatHasChanged == &selectorComboBox)
         {
-            eAudioSourceType sourceType = getAudioSourceTypeForComboBoxID (comboBoxThatHasChanged->getSelectedId());
+            EnumType sourceType = getAudioSourceTypeForComboBoxID (comboBoxThatHasChanged->getSelectedId());
 
             if (audioSourceTypeChangedCallback != nullptr)
                 audioSourceTypeChangedCallback (sourceType);
@@ -72,19 +95,24 @@ public:
         }
     }
 
-    void setAudioSourceTypeChangedCallback (std::function<void (eAudioSourceType)> f) { audioSourceTypeChangedCallback = f; }
+    void setAudioSourceTypeChangedCallback (std::function<void (EnumType)> f) { audioSourceTypeChangedCallback = f; }
 
 private:
     ComboBox selectorComboBox;
-    std::function<void (eAudioSourceType)> audioSourceTypeChangedCallback;
+    std::function<void   (EnumType)> audioSourceTypeChangedCallback;
+    std::function<String (EnumType)> getSourceTypeString;
 
     void fillComboBoxSelections()
     {
         for (int type = 0; type < (int) enNumSourceTypes; type++)
         {
-            eAudioSourceType sourceType = (eAudioSourceType) type;
-            String sourceTypeText = getAudioSourceTypeString (sourceType);
-            selectorComboBox.addItem (sourceTypeText, getComboBoxIDForAudioSourceType (sourceType));
+            EnumType sourceType = (EnumType) type;
+
+            if (getSourceTypeString != nullptr)
+            {
+                String sourceTypeText = getSourceTypeString (sourceType);
+                selectorComboBox.addItem (sourceTypeText, getComboBoxIDForAudioSourceType (sourceType));
+            }
         }
     }
 };

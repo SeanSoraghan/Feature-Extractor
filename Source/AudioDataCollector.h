@@ -42,21 +42,14 @@ public:
 
             if (writeIndex + numberOfSamples <= circleBuffer.getNumSamples())
             {
-                circleBuffer.copyFrom (0, writeIndex, channelData[0], numberOfSamples);
-                //circleBuffer.copyFrom (1, writeIndex, channelData[1], numberOfSamples);
-
-                //circleBuffer.copyFrom (0, writeIndex, channelData[1], numberOfSamples);
+                circleBuffer.copyFrom (0, writeIndex, channelData[channelToCollect], numberOfSamples);
             }
             else
             {
                 for (int index = 0; index < numberOfSamples; index++)
                 {
                     const int modIndex = (index + writeIndex) % circleBuffer.getNumSamples();
-                    circleBuffer.setSample (0, modIndex, channelData[0][index]);
-                    //circleBuffer.setSample (1, modIndex, channelData[1][index]);
-
-
-                    //circleBuffer.setSample (0, modIndex, channelData[1][index]);
+                    circleBuffer.setSample (0, modIndex, channelData[channelToCollect][index]);
                 }
             }
         
@@ -122,12 +115,14 @@ public:
     void toggleCollectInput         (bool shouldCollectInput) noexcept { clearBuffer(); collectInput = shouldCollectInput; }
     void setExpectedSamplesPerBlock (int spb)                 noexcept { expectedSamplesPerBlock = spb; }
     void clearBuffer() { circleBuffer.clear(); }
+    void setChannelToCollect (int c) { channelToCollect = c; }
 private:
     AudioSampleBuffer                        circleBuffer;
     std::function<void (AudioSampleBuffer&)> spectralBufferUpdated;
     int writeIndex                           { 0 };
     int spectralReadPosition                 { 0 };
     int expectedSamplesPerBlock              { 512 };
+    int channelToCollect                     { 0 };
     Atomic<int> analysisBufferUpdating       { 0 };
     Atomic<int> analysisBufferNeedsUpdating  { 1 };
     bool collectInput                        { true };
