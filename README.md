@@ -54,10 +54,9 @@ Harmonic Energy Ratio (HER) - an estimation of how much harmonic energy there is
 Inharmonicity - still in development.
 
 #OSC Bundle Structure
-The harmonic features will be updated on a slower basis than the spectral featues. When all of the features are being sent, the bundle will contain 9 floats in the following order:
+The OSC bundle will contain 9 floats in the following order:
 
 onset, RMS, centroid, flatness, spread, slope, F0, HER, Inharmonicity
 
-When the harmonic features are not being sent, the bundle will contain 6 floats in the following order:
+The harmonic features will be updated on a slower basis than the non-harmonic featues. 
 
-onset, RMS, centroid, flatness, spread, slope
