@@ -87,7 +87,9 @@ public:
         view.setRestartPressedCallback     ([this] ()                                     { audioFilePlayer.restart(); });
 
         view.setAddressChangedCallback       ([this] (String address) { return oscFeatureSender.connectToAddress (address); });
-        view.setBundleAddressChangedCallback ([this] (String address) { oscFeatureSender.bundleAddress = address; });
+        view.setBundleAddressChangedCallback ([this] (String address) 
+        { 
+            oscFeatureSender.bundleAddress = address; });
         view.setAudioSettingsDeviceManager   (deviceManager);
         view.setDisplayedOSCAddress          (oscFeatureSender.address);
         view.setDisplayedBundleAddress       (oscFeatureSender.bundleAddress);

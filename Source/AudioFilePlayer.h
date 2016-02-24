@@ -19,7 +19,6 @@ public:
     {
         formatManager.registerBasicFormats();
         thread.startThread (3);
-        audioTransportSource.setLooping (true);
     }
 
     ~AudioFilePlayer()
@@ -45,7 +44,7 @@ public:
         if (reader != nullptr)
         {
             currentAudioFileSource = new AudioFormatReaderSource (reader, true);
-
+            currentAudioFileSource->setLooping (true);
             // ..and plug it into our transport source
             audioTransportSource.setSource (currentAudioFileSource,
                                             32768,                   // tells it to buffer this many samples ahead

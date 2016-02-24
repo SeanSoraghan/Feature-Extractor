@@ -92,6 +92,31 @@
         <MODULEPATH id="juce_osc" path="../equator-2/JUCE/modules"/>
       </MODULEPATHS>
     </VS2010>
+    <XCODE_MAC targetFolder="Builds/MacOSX">
+      <CONFIGURATIONS>
+        <CONFIGURATION name="Debug" osxSDK="default" osxCompatibility="default" osxArchitecture="default"
+                       isDebug="1" optimisation="1" targetName="Feature-Extractor"/>
+        <CONFIGURATION name="Release" osxSDK="default" osxCompatibility="default" osxArchitecture="default"
+                       isDebug="0" optimisation="3" targetName="Feature-Extractor"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_video" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_osc" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_opengl" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_gui_extra" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_gui_basics" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_graphics" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_events" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_data_structures" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_cryptography" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_core" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_utils" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_processors" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_formats" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_devices" path="../equator-2/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_basics" path="../equator-2/JUCE/modules"/>
+      </MODULEPATHS>
+    </XCODE_MAC>
   </EXPORTFORMATS>
   <MODULES>
     <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="0"/>
