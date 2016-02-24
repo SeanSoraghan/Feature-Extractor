@@ -243,7 +243,7 @@ public:
             sendSpectralFeaturesViaOSC (realTimeAudioFeatures.getHarmonicFeatures().audioOutput.getNumSamples() > 0);
     }
 
-    void sendSpectralFeaturesViaOSC (bool sendHarmonicFeatures)
+    void sendSpectralFeaturesViaOSC (bool updateHarmonicFeatures)
     {
         float centroid = getRunningAverageAndUpdateHistory (Feature::Centroid, OSCFeatureType::Centroid);
         float flatness = getRunningAverageAndUpdateHistory (Feature::Flatness, OSCFeatureType::Flatness);
@@ -251,24 +251,23 @@ public:
         float slope =    getRunningAverageAndUpdateHistory (Feature::Slope, OSCFeatureType::Slope);
         float rmsLevel = getRunningAverageAndUpdateHistory (Feature::Audio, OSCFeatureType::RMS);
         float onset =    detectOnset (); 
-        if (sendHarmonicFeatures)
+        float f0 = 0.0f;
+        float her = 0.0f;
+        float inharm = 0.0f;
+        if (updateHarmonicFeatures)
         {
-            float f0     =  getRunningAverageAndUpdateHistory (Feature::F0, OSCFeatureType::F0);
-            float her    =  getRunningAverageAndUpdateHistory (Feature::HER, OSCFeatureType::HER);
-            float inharm =  getRunningAverageAndUpdateHistory (Feature::Inharmonicity, OSCFeatureType::Inharmonicity);
-            sender.send (bundleAddress, onset, rmsLevel, centroid, flatness, spread, slope, f0, her, inharm);
-            DBG("F0 estimation: "<<f0<<" |her: "<<her<<" |inharm: "<<inharm);
+            f0     =  getRunningAverageAndUpdateHistory (Feature::F0, OSCFeatureType::F0);
+            her    =  getRunningAverageAndUpdateHistory (Feature::HER, OSCFeatureType::HER);
+            inharm =  getRunningAverageAndUpdateHistory (Feature::Inharmonicity, OSCFeatureType::Inharmonicity);  
         }
         else
         {
-            if (onset == 1.0f && onsetDetectedCallback != nullptr)
-            {
-                onsetDetectedCallback();
-                DBG ("onset");
-                onsetDetector.spectralFluxHistory.printHistory();
-            }
-            sender.send (bundleAddress, onset, rmsLevel, centroid, flatness, spread, slope);
+            f0     =  getRunningAverage (OSCFeatureType::F0);
+            her    =  getRunningAverage (OSCFeatureType::HER);
+            inharm =  getRunningAverage (OSCFeatureType::Inharmonicity);
         }
+        sender.send (bundleAddress, onset, rmsLevel, centroid, flatness, spread, slope, f0, her, inharm);
+        DBG("F0 estimation: "<<f0<<" |her: "<<her<<" |inharm: "<<inharm);
     }
 
     float getRunningAverage (OSCFeatureType oscf)
