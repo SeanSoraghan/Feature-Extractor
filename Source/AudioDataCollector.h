@@ -60,7 +60,7 @@ public:
         }
     }
 
-    AudioSampleBuffer getSpectralAnalysisBuffer (int numSamplesRequired)
+    AudioSampleBuffer getAnalysisBuffer (int numSamplesRequired)
     {
         AudioSampleBuffer buffer = AudioSampleBuffer();
         buffer.clear();
@@ -69,18 +69,18 @@ public:
         while (analysisBufferUpdating.get() == 1) {}
         if (analysisBufferUpdating.get() != 1)
         {
-            spectralReadPosition = (circleBuffer.getNumSamples() + (writeIndex - numSamplesRequired)) % circleBuffer.getNumSamples();
+            readIndex = (circleBuffer.getNumSamples() + (writeIndex - numSamplesRequired)) % circleBuffer.getNumSamples();
             
-            if (spectralReadPosition + numSamplesRequired <= circleBuffer.getNumSamples())
+            if (readIndex + numSamplesRequired <= circleBuffer.getNumSamples())
             {
-                buffer.copyFrom (0, 0, circleBuffer, 0, spectralReadPosition, numSamplesRequired);
+                buffer.copyFrom (0, 0, circleBuffer, 0, readIndex, numSamplesRequired);
                 //buffer.copyFrom (1, 0, circleBuffer, 1, spectralReadPosition, numSamplesRequired);
             }
             else
             {
                 for (int index = 0; index < numSamplesRequired; index++)
                 {
-                    const int modIndex = (index + spectralReadPosition) % circleBuffer.getNumSamples();
+                    const int modIndex = (index + readIndex) % circleBuffer.getNumSamples();
                     buffer.setSample (0, index, circleBuffer.getReadPointer (0)[modIndex]);
                     //buffer.setSample (1, index, circleBuffer.getReadPointer (1)[modIndex]);
                 }
@@ -101,11 +101,11 @@ public:
 
     bool indexesOverlap (int numSamplesToFill)
     {
-        if (writeIndex < spectralReadPosition)
-            if (spectralReadPosition < writeIndex + expectedSamplesPerBlock)
+        if (writeIndex < readIndex)
+            if (readIndex < writeIndex + expectedSamplesPerBlock)
                 return true;
-        if (spectralReadPosition < writeIndex)
-            if (writeIndex < spectralReadPosition + numSamplesToFill)
+        if (readIndex < writeIndex)
+            if (writeIndex < readIndex + numSamplesToFill)
                 return true;
         return false;
             
@@ -120,7 +120,7 @@ private:
     AudioSampleBuffer                        circleBuffer;
     std::function<void (AudioSampleBuffer&)> spectralBufferUpdated;
     int writeIndex                           { 0 };
-    int spectralReadPosition                 { 0 };
+    int readIndex                            { 0 };
     int expectedSamplesPerBlock              { 512 };
     int channelToCollect                     { 0 };
     Atomic<int> analysisBufferUpdating       { 0 };

@@ -47,7 +47,10 @@ private:
 class FeatureVisualiser : public Component
 {
 public:
-    FeatureVisualiser (OSCFeatureAnalysisOutput::OSCFeatureType f) : featureType (f) {}
+    FeatureVisualiser (OSCFeatureAnalysisOutput::OSCFeatureType f, float maxV = 1.0f) 
+    :   featureType (f),
+        maxValue    (maxV)
+    {}
 
     void paint (Graphics& g) override 
     {
@@ -69,7 +72,8 @@ public:
     }
 
     OSCFeatureAnalysisOutput::OSCFeatureType featureType;
-    float value { 0.0f };
+    float value    { 0.0f };
+    float maxValue { 1.0f };
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FeatureVisualiser)
 };
     
@@ -79,7 +83,9 @@ class TriggerFeatureVisualiser :    private Timer,
                                     public  Component
 {
 public:
-    TriggerFeatureVisualiser (OSCFeatureAnalysisOutput::OSCFeatureType f) : featureType (f) {}
+    TriggerFeatureVisualiser (OSCFeatureAnalysisOutput::OSCFeatureType f) 
+    :   featureType (f) 
+    {}
 
     void timerCallback() override
     {
@@ -114,7 +120,7 @@ public:
 
     OSCFeatureAnalysisOutput::OSCFeatureType featureType;
 private:
-    float opacity { 0.0f };
+    float opacity  { 0.0f };
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TriggerFeatureVisualiser)
 };  
 //================================================================================
@@ -125,7 +131,7 @@ private:
 {
 public:
     TriggerFeatureView (OSCFeatureAnalysisOutput::OSCFeatureType f) 
-    :   visualiser (f) ,
+    :   visualiser        (f),
         sensitivityLabel  ("Sensitivity", "Sensitivity"),
         windowLengthLabel ("Window Length", "Window Length"),
         typeLabel         ("Type", "Detection Type")
@@ -248,6 +254,8 @@ public:
         {
             if (FeatureListModel::isTriggerFeature (feature))
                 addAndMakeVisible (triggerFeatureViews.add (new TriggerFeatureView (feature)));
+            else if (feature == OSCFeatureAnalysisOutput::OSCFeatureType::F0)
+                addAndMakeVisible (featureVisualisers.add (new FeatureVisualiser (feature, (7902.13f/* B8 */ - 16.35f/* C0 */))));
             else
                 addAndMakeVisible (featureVisualisers.add (new FeatureVisualiser (feature)));
         }
@@ -258,7 +266,7 @@ public:
         if (getLatestFeatureValue)
         {
             for (auto visualiser : featureVisualisers)
-                visualiser->setValue (getLatestFeatureValue (visualiser->featureType));
+                visualiser->setValue (getLatestFeatureValue (visualiser->featureType, visualiser->maxValue));
         }
 
     }
@@ -285,7 +293,10 @@ public:
                 triggerFeatureView->featureTriggered();
     }
 
-    void setFeatureValueQueryCallback (std::function <float (OSCFeatureAnalysisOutput::OSCFeatureType)> f) { getLatestFeatureValue = f; }
+    void setFeatureValueQueryCallback (std::function <float (OSCFeatureAnalysisOutput::OSCFeatureType, float)> f) 
+    { 
+        getLatestFeatureValue = f; 
+    }
     
     void setOnsetSensitivityCallback (std::function<void (float)> f)
     {
@@ -309,9 +320,9 @@ public:
     }
 
 private:
-    OwnedArray<FeatureVisualiser>                                   featureVisualisers;
-    OwnedArray<TriggerFeatureView>                                  triggerFeatureViews;
-    std::function<float (OSCFeatureAnalysisOutput::OSCFeatureType)> getLatestFeatureValue;
+    OwnedArray<FeatureVisualiser>                                                   featureVisualisers;
+    OwnedArray<TriggerFeatureView>                                                  triggerFeatureViews;
+    std::function<float (OSCFeatureAnalysisOutput::OSCFeatureType, float maxValue)> getLatestFeatureValue;
     FeatureListModel& model;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FeatureListView)

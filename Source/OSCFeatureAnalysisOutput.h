@@ -210,14 +210,16 @@ public:
     {
         switch (f)
         {
-            case Onset:       return "Onset";
-            case RMS:         return "RMS";
-            case Centroid:    return "Centroid";
-            case Slope:       return "Slope";
-            case Spread:      return "Spread";
-            case Flatness:    return "Flatness";
-            case F0:          return "F0";
-            case NumFeatures: return "NumFeatures";
+            case Onset:         return "Onset";
+            case RMS:           return "RMS";
+            case Centroid:      return "Centroid";
+            case Slope:         return "Slope";
+            case Spread:        return "Spread";
+            case Flatness:      return "Flatness";
+            case F0:            return "F0";
+            case HER:           return "HER";
+            case Inharmonicity: return "Inharm";
+            case NumFeatures:   return "NumFeatures";
             default: jassert(false); return "UNKNOWN";
         }
     }
@@ -254,8 +256,7 @@ public:
             float f0     =  getRunningAverageAndUpdateHistory (Feature::F0, OSCFeatureType::F0);
             float her    =  getRunningAverageAndUpdateHistory (Feature::HER, OSCFeatureType::HER);
             float inharm =  getRunningAverageAndUpdateHistory (Feature::Inharmonicity, OSCFeatureType::Inharmonicity);
-            /*if (! */sender.send ("/Equator/Feature/All", rmsLevel, centroid, flatness, spread, slope, f0, her, inharm);/*)*/
-                //DBG ("Error: could not send OSC message.");
+            sender.send (bundleAddress, onset, rmsLevel, centroid, flatness, spread, slope, f0, her, inharm);
             DBG("F0 estimation: "<<f0<<" |her: "<<her<<" |inharm: "<<inharm);
         }
         else
@@ -278,7 +279,7 @@ public:
         float rmsAverage = rms.getTotal() / (float) rms.recordedHistory;
         if (rmsAverage > 0.01f)
         {
-            ValueHistory& h = featureHistories[oscf];
+            ValueHistory& h = featureHistories[oscf - 1];
             return h.getTotal() / (float) h.recordedHistory;
         }
         return 0.0f;
@@ -310,7 +311,7 @@ public:
         else
             currentValue = realTimeAudioFeatures.getHarmonicFeatures().getAverageFeatureSample (f, 0);
         
-        ValueHistory& h = featureHistories[oscf];
+        ValueHistory& h = featureHistories[oscf - 1];
 
         float returnValue = (h.getTotal() + currentValue) / (h.recordedHistory + 1);
         h.insertNewValueAndupdateHistory (returnValue);

@@ -44,8 +44,12 @@ public:
 
     void timerCallback() override
     {
-        setSpectralFeatureAudioBuffer();
-        extractFeatures();
+        //setSpectralFeatureAudioBuffer();
+        setFeatureAnalysisAudioBuffer (spectralFeatures, audioAnalyserSpec);
+        extractFeatures               (spectralFeatures, audioAnalyserSpec);
+
+        setFeatureAnalysisAudioBuffer (harmonicFeatures, audioAnalyserHarm);
+        extractFeatures               (harmonicFeatures, audioAnalyserHarm);
     }
 
     void sampleRateChanged (double newSampleRate)
@@ -74,32 +78,65 @@ private:
     ConcatenatedFeatureBuffer spectralFeatures;
     ConcatenatedFeatureBuffer harmonicFeatures;
 
-    void setSpectralFeatureAudioBuffer()
+    //void setSpectralFeatureAudioBuffer()
+    //{
+    //    int numSamplesInAnalysisWindow   = audioAnalyserSpec.fftIn.getNumSamples();
+    //    AudioSampleBuffer audioWindow = audioDataCollector.getAnalysisBuffer (numSamplesInAnalysisWindow);
+    //    
+    //    int numChannels = audioWindow.getNumChannels();
+
+    //    int numSamplesInCollectedBuffer  = audioWindow.getNumSamples();
+
+    //    spectralFeatures.audioOutput.setSize (numChannels, 
+    //                                          numSamplesInCollectedBuffer, false, true);        
+    //    spectralFeatures.audioOutput.clear();
+    //    for (int c = 0; c < numChannels; c++)
+    //    {
+    //        spectralFeatures.audioOutput.copyFrom (c, 0, audioWindow, c, 0, numSamplesInCollectedBuffer);
+    //    }
+    //}
+
+    //void setHarmonicFeatureAudioBuffer()
+    //{
+    //    int numSamplesInAnalysisWindow   = audioAnalyserHarm.fftIn.getNumSamples();
+    //    AudioSampleBuffer audioWindow = audioDataCollector.getAnalysisBuffer (numSamplesInAnalysisWindow);
+    //    
+    //    int numChannels = audioWindow.getNumChannels();
+
+    //    int numSamplesInCollectedBuffer  = audioWindow.getNumSamples();
+
+    //    harmonicFeatures.audioOutput.setSize (numChannels, 
+    //                                          numSamplesInCollectedBuffer, false, true);        
+    //    harmonicFeatures.audioOutput.clear();
+    //    for (int c = 0; c < numChannels; c++)
+    //    {
+    //        harmonicFeatures.audioOutput.copyFrom (c, 0, audioWindow, c, 0, numSamplesInCollectedBuffer);
+    //    }
+    //}
+
+    void setFeatureAnalysisAudioBuffer (ConcatenatedFeatureBuffer& featureBuffer, 
+                                        AudioAnalyser& audioAnalyser)
     {
-        int numSamplesInAnalysisWindow   = audioAnalyserSpec.fftIn.getNumSamples();
-        AudioSampleBuffer audioWindow = audioDataCollector.getSpectralAnalysisBuffer (numSamplesInAnalysisWindow);
+        int numSamplesInAnalysisWindow   = audioAnalyser.fftIn.getNumSamples();
+        AudioSampleBuffer audioWindow    = audioDataCollector.getAnalysisBuffer (numSamplesInAnalysisWindow);
         
         int numChannels = audioWindow.getNumChannels();
 
         int numSamplesInCollectedBuffer  = audioWindow.getNumSamples();
 
-        spectralFeatures.audioOutput.setSize (numChannels, 
+        featureBuffer.audioOutput.setSize (numChannels, 
                                               numSamplesInCollectedBuffer, false, true);        
-        spectralFeatures.audioOutput.clear();
+        featureBuffer.audioOutput.clear();
         for (int c = 0; c < numChannels; c++)
         {
-            spectralFeatures.audioOutput.copyFrom (c, 0, audioWindow, c, 0, numSamplesInCollectedBuffer);
+            featureBuffer.audioOutput.copyFrom (c, 0, audioWindow, c, 0, numSamplesInCollectedBuffer);
         }
     }
 
-    void extractFeatures()
+    void extractFeatures (ConcatenatedFeatureBuffer& features, AudioAnalyser& analyser)
     {
-        if (spectralFeatures.audioOutput.getNumSamples() > 0)
-        {
-            audioAnalyserSpec.performSpectralAnalysis (spectralFeatures);
-            //audioAnalyser.analyseNormalisedZeroCrosses (features);
-            //spectralFeatures.normaliseAudioChannels();
-        }
+        if (features.audioOutput.getNumSamples() > 0)
+            analyser.performSpectralAnalysis (features);
     }
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RealTimeAnalyser)

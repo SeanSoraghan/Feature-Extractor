@@ -33,7 +33,7 @@ public:
         addAndMakeVisible (audioDeviceSelector);
         addAndMakeVisible (audioScrollingDisplay);
 
-        for (int i = 0; i < (int) OSCFeatureAnalysisOutput::OSCFeatureType::F0; i++)
+        for (int i = 0; i < (int) OSCFeatureAnalysisOutput::OSCFeatureType::NumFeatures; i++)
             featureListModel.addFeature ((OSCFeatureAnalysisOutput::OSCFeatureType) i);
         
         featureListView.recreateVisualisersFromModel();
@@ -112,7 +112,7 @@ public:
     void setOnsetSensitivityCallback   (std::function<void (float)> f)                                                    { featureListView.setOnsetSensitivityCallback (f); }
     void setOnsetWindowSizeCallback    (std::function<void (int)> f)                                                      { featureListView.setOnsetWindowLengthCallback (f); }
     void setOnsetDetectionTypeCallback (std::function<void (OnsetDetector::eOnsetDetectionType)> f)                       { featureListView.setOnsetDetectionTypeCallback (f); }
-    void setFeatureValueQueryCallback (std::function<float (OSCFeatureAnalysisOutput::OSCFeatureType)> f)                 { featureListView.setFeatureValueQueryCallback (f); }
+    void setFeatureValueQueryCallback (std::function<float (OSCFeatureAnalysisOutput::OSCFeatureType, float maxValue)> f) { featureListView.setFeatureValueQueryCallback (f); }
     
 private:
     AudioVisualiserComponent                    audioScrollingDisplay;

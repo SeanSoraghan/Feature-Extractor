@@ -44,10 +44,10 @@ public:
 
         audioFilePlayer.setupAudioCallback (deviceManager);
 
-        view.setFeatureValueQueryCallback ([this] (OSCFeatureAnalysisOutput::OSCFeatureType oscf) 
+        view.setFeatureValueQueryCallback ([this] (OSCFeatureAnalysisOutput::OSCFeatureType oscf, float maxValue) 
                                                    { 
                                                        if ( ! OSCFeatureAnalysisOutput::isTriggerFeature (oscf))
-                                                           return oscFeatureSender.getRunningAverage (oscf); 
+                                                           return oscFeatureSender.getRunningAverage (oscf) / maxValue; 
                                                    });
 
         //switches between listening to input or output
