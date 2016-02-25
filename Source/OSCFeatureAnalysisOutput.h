@@ -266,7 +266,7 @@ public:
             her    =  getRunningAverage (OSCFeatureType::HER);
             inharm =  getRunningAverage (OSCFeatureType::Inharmonicity);
         }
-        sender.send (bundleAddress, onset, rmsLevel, centroid, flatness, spread, slope, f0, her, inharm);
+        sender.send (bundleAddress, onset, rmsLevel, centroid, flatness, spread, slope, f0 / (7902.13f/* B8 */ - 16.35f/* C0 */), her, inharm);
         DBG("F0 estimation: "<<f0<<" |her: "<<her<<" |inharm: "<<inharm);
     }
 
