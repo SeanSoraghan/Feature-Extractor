@@ -37,13 +37,16 @@ Centroid (0 - 1)  - the spectral centroid of the signal. This can be a good indi
 
 Flatness (0 - 1)  - the spectral flatness of the signal. This can be a good indication of the 'noisiness' of a sound.
 
-Spread   (0 - 1)  - the spectral spread of the audio signal. Pure sinusoidal tones will have close to 0 spread. Board broadband signals will have
+Spread   (0 - 1)  - the spectral spread of the audio signal. Pure sinusoidal tones will have close to 0 spread. More broadband signals will have
                     higher spectral spread.
 
 Slope    (-1 - 1) - the spectral slope of the signal. The 'gradient' of the spectrum. Higher slope values indicate a higher proportion
                     of high-end frequency in the spectrum
 
 #Harmonic
+
+The harmonic features are still in development - there should be an updated (working) version coming very soon.
+
 F0 Estimation (0 - 1) - a very crude estimation of the fundamental frequency. It is currently normalised between C0 (16.35Hz) and B8
                         (7902.13Hz).
 
