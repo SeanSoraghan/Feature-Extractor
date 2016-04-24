@@ -15,11 +15,12 @@
 /*
     Main view that holds all the individual controls and displays.
 */
-class MainView : public Component
+class MainView : public Component, public Slider::Listener
 {
 public:
     MainView ()
-    :   audioScrollingDisplay             (1),
+    :   gainLabel                         ("gainLabel", "Gain:"),
+        audioScrollingDisplay             (1),
         featureListView                   (featureListModel),
         audioSourceTypeSelectorController (getAudioSourceTypeString),
         channelTypeSelector               (getChannelTypeString)
@@ -47,6 +48,18 @@ public:
 
         addAndMakeVisible (audioSourceTypeSelectorController.getSelector());
         addAndMakeVisible (channelTypeSelector.getSelector());
+
+        gainLabel.setJustificationType  (Justification::centredLeft);
+        gainSlider.setRange (0.0, 100.0, 0.01);
+        gainSlider.addListener (this);
+        gainSlider.setDoubleClickReturnValue (true, 1.0);
+        gainSlider.setValue (1.0);
+        gainSlider.setSliderStyle (Slider::SliderStyle::LinearBar);
+
+        addAndMakeVisible (gainSlider);
+        addAndMakeVisible (gainLabel);
+
+        addAndMakeVisible (pitchEstimationVisualiser);
     }
 
     void resized() override
@@ -62,7 +75,7 @@ public:
 
         audioScrollingDisplay.setBounds                  (localBounds.removeFromTop (displayHeight));
         audioFileTransportController.getView().setBounds (audioScrollingDisplay.getBounds());
-        localBounds.removeFromTop                        (verticalMargin);
+        auto gainBounds = localBounds.removeFromTop      (verticalMargin).reduced ((int) (getWidth() * 0.35f), (int) (verticalMargin * 0.2f));
         featureListView.setBounds                        (localBounds.removeFromTop (featureVisualiserHeight));
         localBounds.removeFromTop                        (verticalMargin);
 
@@ -81,9 +94,22 @@ public:
         auto channelSelectorBounds = selectorBounds.removeFromRight (FeatureExtractorLookAndFeel::getAudioSourceTypeSelectorWidth());
         audioSourceTypeSelectorController.getSelector().setBounds (audioSourceSelectorBounds);
         channelTypeSelector.getSelector().setBounds (channelSelectorBounds);
+
+        gainLabel.setBounds  (gainBounds.removeFromLeft (gainBounds.getWidth() / 2));
+        gainSlider.setBounds (gainBounds);
+
+        pitchEstimationVisualiser.setBounds (getLocalBounds().withSizeKeepingCentre (400, 400));
     }
 
-    AudioVisualiserComponent& getAudioDisplayComponent() { return audioScrollingDisplay; }
+    void sliderValueChanged (Slider* s) override
+    {
+        if (s == &gainSlider)
+            if (gainChangedCallback != nullptr)
+                gainChangedCallback ((float) s->getValue());
+    }
+
+    AudioVisualiserComponent&  getAudioDisplayComponent()     { return audioScrollingDisplay; }
+    PitchEstimationVisualiser& getPitchEstimationVisualiser() { return pitchEstimationVisualiser; }
 
     void setAudioSettingsDeviceManager (AudioDeviceManager& deviceManager)
     {
@@ -108,19 +134,31 @@ public:
 
     void clearAudioDisplayData()                                                                                          { audioScrollingDisplay.clear(); }
 
-    void featureTriggered (OSCFeatureAnalysisOutput::OSCFeatureType triggerType)                                          { featureListView.featureTriggered (triggerType); }
-    void setOnsetSensitivityCallback   (std::function<void (float)> f)                                                    { featureListView.setOnsetSensitivityCallback (f); }
-    void setOnsetWindowSizeCallback    (std::function<void (int)> f)                                                      { featureListView.setOnsetWindowLengthCallback (f); }
-    void setOnsetDetectionTypeCallback (std::function<void (OnsetDetector::eOnsetDetectionType)> f)                       { featureListView.setOnsetDetectionTypeCallback (f); }
-    void setFeatureValueQueryCallback (std::function<float (OSCFeatureAnalysisOutput::OSCFeatureType, float maxValue)> f) { featureListView.setFeatureValueQueryCallback (f); }
-    
+    void featureTriggered (OSCFeatureAnalysisOutput::OSCFeatureType triggerType)                                          
+    { 
+        MessageManager::getInstance()->callAsync ([this, triggerType]()
+        {
+            featureListView.featureTriggered (triggerType);
+        });   
+    }
+
+    void setOnsetSensitivityCallback   (std::function<void (float)> f)                                                     { featureListView.setOnsetSensitivityCallback (f); }
+    void setOnsetWindowSizeCallback    (std::function<void (int)> f)                                                       { featureListView.setOnsetWindowLengthCallback (f); }
+    void setOnsetDetectionTypeCallback (std::function<void (OnsetDetector::eOnsetDetectionType)> f)                        { featureListView.setOnsetDetectionTypeCallback (f); }
+    void setFeatureValueQueryCallback  (std::function<float (OSCFeatureAnalysisOutput::OSCFeatureType, float maxValue)> f) { featureListView.setFeatureValueQueryCallback (f); }
+    void setGainChangedCallback        (std::function<void (float)> f)                                                     { gainChangedCallback = f; }
+
 private:
+    std::function<void (float)>                 gainChangedCallback;
+    Label                                       gainLabel;
+    Slider                                      gainSlider;
     AudioVisualiserComponent                    audioScrollingDisplay;
     AudioFileTransportController                audioFileTransportController;
     ScopedPointer<AudioDeviceSelectorComponent> audioDeviceSelector;
     FeatureListModel                            featureListModel;
     FeatureListView                             featureListView;
     OSCSettingsController                       oscSettingsController;
+    PitchEstimationVisualiser                   pitchEstimationVisualiser;
     AudioSourceSelectorController<>             audioSourceTypeSelectorController;
     AudioSourceSelectorController<eChannelType> channelTypeSelector;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainView)

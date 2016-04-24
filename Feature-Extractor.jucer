@@ -18,6 +18,8 @@
         <FILE id="nmW3mf" name="AudioDataCollector.h" compile="0" resource="0"
               file="Source/AudioDataCollector.h"/>
         <FILE id="K50rWy" name="AudioFeatures.h" compile="0" resource="0" file="Source/AudioFeatures.h"/>
+        <FILE id="ussYD0" name="RealTimeAudioAnalysis.h" compile="0" resource="0"
+              file="Source/RealTimeAudioAnalysis.h"/>
         <FILE id="DB6AIY" name="RealTimeAnalyser.h" compile="0" resource="0"
               file="Source/RealTimeAnalyser.h"/>
       </GROUP>
@@ -34,6 +36,8 @@
               file="Source/LiveScrollingAudioDisplay.h"/>
         <FILE id="bxk1H8" name="MainView.h" compile="0" resource="0" file="Source/MainView.h"/>
         <FILE id="juXzzq" name="OSCSettings.h" compile="0" resource="0" file="Source/OSCSettings.h"/>
+        <FILE id="rA6vLx" name="PitchEstimationVisualiser.h" compile="0" resource="0"
+              file="Source/PitchEstimationVisualiser.h"/>
       </GROUP>
       <FILE id="Gz5EKX" name="include.h" compile="0" resource="0" file="Source/include.h"/>
       <FILE id="vznz0B" name="MainComponent.cpp" compile="1" resource="0"

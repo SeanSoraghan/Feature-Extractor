@@ -42,6 +42,8 @@ public:
     static Colour getControlBackgroundColour()               noexcept { return Colours::green; }
     static Colour getTextEditorBackgroundColour()            noexcept { return Colours::lightgreen; }
     static Colour getAudioTransportButtonForegroundColour()  noexcept { return Colours::black; }
+    static Colour getBufferBackgroundColour()                noexcept { return Colours::black; }
+    static Colour getBufferForegroundColour()                noexcept { return Colours::white; }
 
     static void paintFeatureVisualiser (Graphics& g, float value, Rectangle<int> visualiserBounds)
     {
@@ -290,6 +292,77 @@ public:
         g.fillRoundedRectangle (textEditor.getLocalBounds().toFloat(), getCornerSize());
     }
 
+    //================================================================================
+    // Buffer drawing functions
+    //================================================================================
+
+    static void drawBuffer (Graphics& g, Rectangle<float> bounds, AudioSampleBuffer buffer, int numSamples)
+    {
+        const int numChannels = buffer.getNumChannels();
+        jassert (numSamples  <= buffer.getNumSamples());
+
+        g.setColour (FeatureExtractorLookAndFeel::getBufferBackgroundColour());
+        g.fillRect  (bounds);
+
+        const auto channelHeight   = bounds.getHeight() / numChannels;
+        const auto binWidth        = bounds.getWidth() / (float) numSamples;
+        const auto visualAmplifier = 1.0f;
+        RectangleList<float> bins;
+        for (int channel = 0; channel < numChannels; channel++)
+        {
+            auto channelBounds = bounds.removeFromTop (channelHeight);
+            
+            for (int s = 0; s < numSamples; s++)
+            {
+                const auto sampleValue = buffer.getSample (channel, s) * visualAmplifier; 
+                const auto binBounds    = channelBounds.removeFromLeft (binWidth).removeFromBottom (sampleValue * channelHeight); 
+                bins.add (binBounds);
+            }
+        }
+        g.setColour (FeatureExtractorLookAndFeel::getBufferForegroundColour());
+        g.fillRectList (bins);
+    }
+
+    static void drawBipolarBuffer (Graphics& g, Rectangle<float> bounds, AudioSampleBuffer buffer, int numSamples)
+    {
+        const int numChannels = buffer.getNumChannels();
+        jassert (numSamples  <= buffer.getNumSamples());
+
+        g.setColour (FeatureExtractorLookAndFeel::getBufferBackgroundColour());
+        g.fillRect  (bounds);
+
+        const auto channelHeight   = bounds.getHeight() / numChannels;
+        const auto binWidth        = bounds.getWidth() / (float) numSamples;
+        const auto visualAmplifier = 1.0f;
+        RectangleList<float> samples;
+        for (int channel = 0; channel < numChannels; channel++)
+        {
+            auto channelBounds = bounds.removeFromTop (channelHeight);
+
+            for (int s = 0; s < numSamples; s++)
+            {
+                auto sampleBounds = channelBounds.removeFromLeft (binWidth);
+                const auto sampleValue = buffer.getSample (channel, s) * visualAmplifier; 
+
+                if (sampleValue >= 0.0f)
+                    samples.add (sampleBounds.removeFromTop (channelHeight / 2.0f).removeFromBottom (sampleValue * channelHeight));
+                else
+                    samples.add (sampleBounds.removeFromBottom (channelHeight / 2.0f).removeFromTop ((float) (abs ((double) sampleValue)) * channelHeight));
+            }
+        }
+        g.setColour (FeatureExtractorLookAndFeel::getBufferForegroundColour());
+        g.fillRectList (samples);
+    }
+
+    static void drawPeakPoint (Graphics& g, Rectangle<float> bounds, Point<float> peakPoint)
+    {
+        const float peakX =      peakPoint.getX() * bounds.getWidth();
+        const float zeroLine =   bounds.getHeight() * 0.5f;
+        const float poleHeight = bounds.getHeight() * 0.5f;
+        const float peakY =      zeroLine - peakPoint.getY() * poleHeight;
+        g.setColour (Colours::red);
+        g.fillEllipse (peakX, peakY, 3.0f, 3.0f);
+    }
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FeatureExtractorLookAndFeel)
 };
 

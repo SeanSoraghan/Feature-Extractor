@@ -29,54 +29,117 @@ public:
         addAndMakeVisible (view);
         
         //deviceManager.addAudioCallback (&view.getAudioDisplayComponent());
-        audioDataCollector.setSpectralBufferUpdatedCallback ([this] (AudioSampleBuffer& b) 
-                                                             {
-                                                                 view.getAudioDisplayComponent().pushBuffer (b);
-                                                             });
+        audioDataCollector.setBufferToDrawUpdatedCallback ([this] (AudioSampleBuffer& b) 
+        {
+            MessageManager::getInstance()->callAsync ([this, b]()
+            {
+                view.getAudioDisplayComponent().pushBuffer (b);
+            });
+        });
+
+        audioDataCollector.setNotifyAnalysisThreadCallback ([this]()
+        {
+            audioAnalyser.notify();
+        });
 
         oscFeatureSender.onsetDetectedCallback = ([this] () 
-                                                 {
-                                                     view.featureTriggered (OSCFeatureAnalysisOutput::OSCFeatureType::Onset);
-                                                 });
+        {
+            view.featureTriggered (OSCFeatureAnalysisOutput::OSCFeatureType::Onset);            
+        });
 
         deviceManager.addAudioCallback (&audioDataCollector);
-        
-
         audioFilePlayer.setupAudioCallback (deviceManager);
 
         view.setFeatureValueQueryCallback ([this] (OSCFeatureAnalysisOutput::OSCFeatureType oscf, float maxValue) 
-                                                   { 
-                                                       if ( ! OSCFeatureAnalysisOutput::isTriggerFeature (oscf))
-                                                           return oscFeatureSender.getRunningAverage (oscf) / maxValue; 
-                                                   });
+        { 
+            if ( ! OSCFeatureAnalysisOutput::isTriggerFeature (oscf))
+                return oscFeatureSender.getRunningAverage (oscf) / maxValue;
+            return 0.0f;
+        });
 
         //switches between listening to input or output
         view.setAudioSourceTypeChangedCallback ([this] (eAudioSourceType type) 
-                                                        { 
-                                                            bool input = type == eAudioSourceType::enIncomingAudio;
+        { 
+            bool input = type == eAudioSourceType::enIncomingAudio;
                                                            
-                                                            if (input)
-                                                                audioFilePlayer.stop();
+            if (input)
+                audioFilePlayer.stop();
                                                             
-                                                            audioDataCollector.toggleCollectInput (input);
-                                                            view.toggleShowTransportControls (type == eAudioSourceType::enAudioFile);
-                                                            view.clearAudioDisplayData();
-                                                        }
-                                                );
+            audioDataCollector.toggleCollectInput (input);
+            view.toggleShowTransportControls (type == eAudioSourceType::enAudioFile);
+            view.clearAudioDisplayData();
+        });
 
         view.setChannelTypeChangedCallback ([this] (eChannelType t) { audioDataCollector.setChannelToCollect ((int) t); });
         
         view.setFileDroppedCallback ([this] (File& f) 
-                                    { 
-                                        audioDataCollector.clearBuffer();
-                                        view.clearAudioDisplayData();
-                                        audioFilePlayer.loadFileIntoTransport (f); 
+        { 
+            audioDataCollector.clearBuffer();
+            view.clearAudioDisplayData();
+            audioFilePlayer.loadFileIntoTransport (f); 
 
-                                        if (audioFilePlayer.hasFile())
-                                            view.setAudioTransportState (AudioFileTransportController::eAudioTransportState::enFileStopped);
-                                        else
-                                            view.setAudioTransportState (AudioFileTransportController::eAudioTransportState::enNoFileSelected);
-                                    } );
+            if (audioFilePlayer.hasFile())
+                view.setAudioTransportState (AudioFileTransportController::eAudioTransportState::enFileStopped);
+            else
+                view.setAudioTransportState (AudioFileTransportController::eAudioTransportState::enNoFileSelected);
+        } );
+
+        //Overlapped audio visuals
+        view.getPitchEstimationVisualiser().getOverlappedBufferVisualiser().setGetBufferCallback ([this]()
+        {
+            return audioAnalyser.getOverlapper().getBufferToDraw();
+        });
+
+        view.getPitchEstimationVisualiser().getOverlappedBufferVisualiser().setTagBufferForUpdateCallback ([this]()
+        {
+            audioAnalyser.getOverlapper().enableBufferToDrawNeedsUpdating();
+        });
+
+        //Overlapped audio visuals
+        view.getPitchEstimationVisualiser().getFFTBufferVisualiser().setGetBufferCallback ([this]()
+        {
+            return audioAnalyser.getPitchAnalyser().getFFTBufferToDraw();
+        });
+
+        view.getPitchEstimationVisualiser().getFFTBufferVisualiser().setTagBufferForUpdateCallback ([this]()
+        {
+            audioAnalyser.getPitchAnalyser().enableFFTBufferToDrawNeedsUpdating();
+        });
+
+        //autocorrelation visuals
+        view.getPitchEstimationVisualiser().getAutoCorrelationBufferVisualiser().setGetBufferCallback ([this]()
+        {
+            return audioAnalyser.getPitchAnalyser().getAutoCorrelationBufferToDraw();
+        });
+
+        view.getPitchEstimationVisualiser().getAutoCorrelationBufferVisualiser().setTagBufferForUpdateCallback ([this]()
+        {
+            audioAnalyser.getPitchAnalyser().enableAutoCorrelationBufferToDrawNeedsUpdating();
+        });
+
+        //cumulative differnece visuals
+        view.getPitchEstimationVisualiser().getCumulativeDifferenceBufferVisualiser().setGetBufferCallback ([this]()
+        {
+            return audioAnalyser.getPitchAnalyser().getCumulativeDifferenceBufferToDraw();
+        });
+
+        view.getPitchEstimationVisualiser().getCumulativeDifferenceBufferVisualiser().setGetPeakPositionCallback ([this]()
+        {
+            return audioAnalyser.getPitchAnalyser().getNormalisedLagPosition();
+        });
+
+        view.getPitchEstimationVisualiser().getCumulativeDifferenceBufferVisualiser().setTagBufferForUpdateCallback ([this]()
+        {
+            audioAnalyser.getPitchAnalyser().enableCumulativeDifferenceBufferNeedsUpdating();
+        });
+
+        //Pitch value visuals
+        view.getPitchEstimationVisualiser().setGetPitchEstimateCallback ([this]()
+        {
+            return audioAnalyser.getPitchEstimate();
+        });
+
+        view.setGainChangedCallback ([this] (float g) { audioDataCollector.setGain (g); });
 
         view.setOnsetSensitivityCallback   ([this] (float s)                              { oscFeatureSender.setOnsetDetectionSensitivity (s); });
         view.setOnsetWindowSizeCallback    ([this] (int s)                                { oscFeatureSender.setOnsetWindowLength (s); });
@@ -97,14 +160,17 @@ public:
 
     ~MainContentComponent()
     {
+        audioAnalyser.stopThread (100);
         shutdownAudio();
     }
 
     //=======================================================================
     void prepareToPlay (int samplesPerBlockExpected, double sampleRate) override
     {
-        view.getAudioDisplayComponent().setSamplesPerBlock (samplesPerBlockExpected);
+        audioAnalyser.stopThread (100);
         audioAnalyser.sampleRateChanged (sampleRate);
+        view.getAudioDisplayComponent().setSamplesPerBlock (samplesPerBlockExpected);
+        audioAnalyser.startThread (4);
         audioDataCollector.setExpectedSamplesPerBlock (samplesPerBlockExpected);
     }
 

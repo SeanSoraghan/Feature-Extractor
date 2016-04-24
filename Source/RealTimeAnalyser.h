@@ -13,11 +13,12 @@
 
 typedef ConcatenatedFeatureBuffer::Feature Feature;
 
-class RealTimeAnalyser : private Timer
+class RealTimeAnalyser : public Thread
 {
 public:
     RealTimeAnalyser (AudioDataCollector& adc, double sampleRate = 48000.0)
-    :   audioDataCollector (adc),
+    :   Thread ("Audio analysis thread"),
+        audioDataCollector (adc),
         audioAnalyserSpec (/*state.currentSamplesPerBlock*/128, 
                            1, 
                            sampleRate / 2.0,
@@ -39,26 +40,31 @@ public:
                           1,
                           audioAnalyserHarm.fftOut.getNumSamples() - 1,
                           0.0,
-                          sampleRate)
+                          sampleRate),
+        pitchEstimator   (1024, sampleRate),
+        overlapper       (1, 1024, audioDataCollector),
+        f0Estimation     (5)
     {}
 
-    void timerCallback() override
+    void run() override
     {
-        //setSpectralFeatureAudioBuffer();
-        setFeatureAnalysisAudioBuffer (spectralFeatures, audioAnalyserSpec);
-        extractFeatures               (spectralFeatures, audioAnalyserSpec);
-
-        setFeatureAnalysisAudioBuffer (harmonicFeatures, audioAnalyserHarm);
-        extractFeatures               (harmonicFeatures, audioAnalyserHarm);
+        while (!threadShouldExit())
+        {
+            ///setFeatureAnalysisAudioBuffer (spectralFeatures, audioAnalyserSpec);
+            //extractFeatures               (spectralFeatures, audioAnalyserSpec);
+            estimateF0();
+            wait (-1);
+        }
     }
 
     void sampleRateChanged (double newSampleRate)
     {
+        //stopThread();
         spectralFeatures.nyquistFrequency = newSampleRate / 2.0;
         spectralFeatures.nyquistFrequency = newSampleRate / 2.0;
 
-        stopTimer();
-        startTimerHz (FeatureExtractorLookAndFeel::getAnimationRateHz());
+        
+        //startThread (FeatureExtractorLookAndFeel::getAnimationRateHz());
     }
 
     ConcatenatedFeatureBuffer& getSpectralFeatures()
@@ -71,48 +77,20 @@ public:
         return harmonicFeatures;
     }
 
+    float getPitchEstimate() { return (float) f0Estimation.getTotal() / f0Estimation.recordedHistory; }
+
+    PitchAnalyser&               getPitchAnalyser() { return pitchEstimator; }
+    RealTimeAudioDataOverlapper& getOverlapper()    { return overlapper; }
+
 private:
-    AudioDataCollector&       audioDataCollector;
-    AudioAnalyser             audioAnalyserSpec;
-    AudioAnalyser             audioAnalyserHarm;
-    ConcatenatedFeatureBuffer spectralFeatures;
-    ConcatenatedFeatureBuffer harmonicFeatures;
-
-    //void setSpectralFeatureAudioBuffer()
-    //{
-    //    int numSamplesInAnalysisWindow   = audioAnalyserSpec.fftIn.getNumSamples();
-    //    AudioSampleBuffer audioWindow = audioDataCollector.getAnalysisBuffer (numSamplesInAnalysisWindow);
-    //    
-    //    int numChannels = audioWindow.getNumChannels();
-
-    //    int numSamplesInCollectedBuffer  = audioWindow.getNumSamples();
-
-    //    spectralFeatures.audioOutput.setSize (numChannels, 
-    //                                          numSamplesInCollectedBuffer, false, true);        
-    //    spectralFeatures.audioOutput.clear();
-    //    for (int c = 0; c < numChannels; c++)
-    //    {
-    //        spectralFeatures.audioOutput.copyFrom (c, 0, audioWindow, c, 0, numSamplesInCollectedBuffer);
-    //    }
-    //}
-
-    //void setHarmonicFeatureAudioBuffer()
-    //{
-    //    int numSamplesInAnalysisWindow   = audioAnalyserHarm.fftIn.getNumSamples();
-    //    AudioSampleBuffer audioWindow = audioDataCollector.getAnalysisBuffer (numSamplesInAnalysisWindow);
-    //    
-    //    int numChannels = audioWindow.getNumChannels();
-
-    //    int numSamplesInCollectedBuffer  = audioWindow.getNumSamples();
-
-    //    harmonicFeatures.audioOutput.setSize (numChannels, 
-    //                                          numSamplesInCollectedBuffer, false, true);        
-    //    harmonicFeatures.audioOutput.clear();
-    //    for (int c = 0; c < numChannels; c++)
-    //    {
-    //        harmonicFeatures.audioOutput.copyFrom (c, 0, audioWindow, c, 0, numSamplesInCollectedBuffer);
-    //    }
-    //}
+    AudioDataCollector&         audioDataCollector;
+    AudioAnalyser               audioAnalyserSpec;
+    AudioAnalyser               audioAnalyserHarm;
+    ConcatenatedFeatureBuffer   spectralFeatures;
+    ConcatenatedFeatureBuffer   harmonicFeatures;
+    PitchAnalyser               pitchEstimator;
+    RealTimeAudioDataOverlapper overlapper;
+    ValueHistory                f0Estimation;
 
     void setFeatureAnalysisAudioBuffer (ConcatenatedFeatureBuffer& featureBuffer, 
                                         AudioAnalyser& audioAnalyser)
@@ -139,6 +117,12 @@ private:
             analyser.performSpectralAnalysis (features);
     }
 
+    void estimateF0 ()
+    {
+        const int numSamplesInAnalysisWindow = pitchEstimator.getFFTExpectedSamples();
+        AudioSampleBuffer audioWindow = overlapper.getNextBuffer();
+        f0Estimation.insertNewValueAndupdateHistory (pitchEstimator.estimatePitch (audioWindow));
+    }
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RealTimeAnalyser)
 };
 

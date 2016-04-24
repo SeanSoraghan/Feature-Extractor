@@ -16,7 +16,10 @@
 
 #include "AudioFilePlayer.h"
 
+
+
 #include "AudioDataCollector.h"
+#include "RealTimeAudioAnalysis.h"
 #include "AudioFeatures.h"
 #include "AudioAnalysis.h"
 #include "RealTimeAnalyser.h"
@@ -27,6 +30,7 @@
 #include "AudioFeaturesListComponent.h"
 #include "AudioFileTransportComponent.h"
 #include "LiveScrollingAudioDisplay.h"
+#include "PitchEstimationVisualiser.h"
 #include "OSCSettings.h"
 #include "MainView.h"
 

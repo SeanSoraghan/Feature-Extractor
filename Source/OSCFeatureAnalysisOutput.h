@@ -15,62 +15,7 @@
 
 typedef ConcatenatedFeatureBuffer::Feature Feature;
 
-struct ValueHistory 
-{
-    ValueHistory (int historyLength)
-    :   recordedHistory (0)
-    {
-        setHistoryLength (historyLength);
-    }
 
-    float getTotal()
-    {
-        float total = 0.0f;
-        for (int i = 0; i < (int)history.size(); i++)
-        {
-            total += history[i];
-        }
-        return total;
-    }
-
-    void insertNewValueAndupdateHistory (float newValue)
-    {
-        for (int i = 0; i < (int) history.size() - 1; i++)
-        {
-            history[i] = history[i + 1];
-        }
-        history[history.size() - 1] = newValue;
-        
-        //updateHistoryIndex();
-        
-        if (recordedHistory < (int) history.size())
-            recordedHistory ++;
-    }
-
-    void setHistoryLength (int historyLength)
-    {
-        recordedHistory = 0;
-        history.clear();
-        for (int i = 0; i < historyLength; i++)
-        {
-            history.push_back (0.0f);
-        }
-    }
-
-    void printHistory()
-    {
-        String h (String::empty);
-        for (int i = 0; i < (int)history.size(); i++)
-        {
-            h<<String (history[i]);
-            h<<" ";
-        }
-        DBG(h);
-    }
-
-    std::vector<float> history;
-    int recordedHistory;
-};
 
 //==============================================================================
 //==============================================================================
@@ -245,29 +190,24 @@ public:
 
     void sendSpectralFeaturesViaOSC (bool updateHarmonicFeatures)
     {
+        float rmsLevel = getRunningAverageAndUpdateHistory (Feature::Audio, OSCFeatureType::RMS);
         float centroid = getRunningAverageAndUpdateHistory (Feature::Centroid, OSCFeatureType::Centroid);
         float flatness = getRunningAverageAndUpdateHistory (Feature::Flatness, OSCFeatureType::Flatness);
         float spread =   getRunningAverageAndUpdateHistory (Feature::Spread, OSCFeatureType::Spread);
         float slope =    getRunningAverageAndUpdateHistory (Feature::Slope, OSCFeatureType::Slope);
-        float rmsLevel = getRunningAverageAndUpdateHistory (Feature::Audio, OSCFeatureType::RMS);
-        float onset =    detectOnset (); 
-        float f0 = 0.0f;
-        float her = 0.0f;
-        float inharm = 0.0f;
+        float onset =    detectOnset ();  
         if (updateHarmonicFeatures)
         {
-            f0     =  getRunningAverageAndUpdateHistory (Feature::F0, OSCFeatureType::F0);
-            her    =  getRunningAverageAndUpdateHistory (Feature::HER, OSCFeatureType::HER);
-            inharm =  getRunningAverageAndUpdateHistory (Feature::Inharmonicity, OSCFeatureType::Inharmonicity);  
+            float f0     =  getRunningAverageAndUpdateHistory (Feature::F0, OSCFeatureType::F0);
+            float her    =  getRunningAverageAndUpdateHistory (Feature::HER, OSCFeatureType::HER);
+            float inharm =  getRunningAverageAndUpdateHistory (Feature::Inharmonicity, OSCFeatureType::Inharmonicity);  
+            //DBG("F0 estimation: "<<f0<<" |her: "<<her<<" |inharm: "<<inharm);
+            sender.send (bundleAddress, onset, rmsLevel, centroid, flatness, spread, slope, f0 / (7902.13f/* B8 */ - 16.35f/* C0 */), her, inharm);
         }
         else
         {
-            f0     =  getRunningAverage (OSCFeatureType::F0);
-            her    =  getRunningAverage (OSCFeatureType::HER);
-            inharm =  getRunningAverage (OSCFeatureType::Inharmonicity);
-        }
-        sender.send (bundleAddress, onset, rmsLevel, centroid, flatness, spread, slope, f0 / (7902.13f/* B8 */ - 16.35f/* C0 */), her, inharm);
-        DBG("F0 estimation: "<<f0<<" |her: "<<her<<" |inharm: "<<inharm);
+            sender.send (bundleAddress, onset, rmsLevel, centroid, flatness, spread, slope);
+        }  
     }
 
     float getRunningAverage (OSCFeatureType oscf)
@@ -304,15 +244,27 @@ public:
         float currentValue = 0.0f;
 
         if (oscf == OSCFeatureType::RMS)
-            currentValue = realTimeAudioFeatures.getSpectralFeatures().getAverageRMSLevel();
+            currentValue = realTimeAudioFeatures.getSpectralFeatures().getAverageRMSLevel();// max amp or rms?
         else if (ConcatenatedFeatureBuffer::isFeatureSpectral (f))
             currentValue = realTimeAudioFeatures.getSpectralFeatures().getAverageFeatureSample (f, 0);
         else
             currentValue = realTimeAudioFeatures.getHarmonicFeatures().getAverageFeatureSample (f, 0);
         
         ValueHistory& h = featureHistories[oscf - 1];
+        
+        float returnValue = currentValue;
+        if (h.recordedHistory >= 1)
+        {
+            float average = h.getTotal() / h.recordedHistory;
+            if (currentValue < 1.3f * average && currentValue > 0.7f * average)
+                returnValue = (h.getTotal() + currentValue) / (h.recordedHistory + 1);
+        }
 
-        float returnValue = (h.getTotal() + currentValue) / (h.recordedHistory + 1);
+        float eps = 0.0001f;
+
+        if (returnValue < eps)
+            returnValue = 0.0f;
+
         h.insertNewValueAndupdateHistory (returnValue);
         return returnValue;
     }

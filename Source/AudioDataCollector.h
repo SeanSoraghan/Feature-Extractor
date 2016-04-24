@@ -34,8 +34,15 @@ public:
                                 float** outputChannelData, int /*numOutputChannels*/,
                                 int numberOfSamples) override
     {
-        if (analysisBufferNeedsUpdating.get() == 1)
-        {
+        //const float** channelData = collectInput ? inputChannelData : outputChannelData;
+        //AudioSampleBuffer buffer (collectInput ? numInputChannels : numOutputChannels, numberOfSamples);
+        //buffer.clear();
+        //buffer.copyFrom (0, 0, channelData[0], numberOfSamples);
+        //updateSpectralBufferVisualiser (buffer);
+        
+
+        //if (analysisBufferNeedsUpdating.get() == 1)
+        //{
             const float** channelData = collectInput ? inputChannelData : outputChannelData;
 
             analysisBufferUpdating.set (1);
@@ -55,9 +62,11 @@ public:
         
             writeIndex = (writeIndex + numberOfSamples) % circleBuffer.getNumSamples();
 
-            analysisBufferNeedsUpdating.set (0);
             analysisBufferUpdating.set (0);
-        }
+
+            if (notifyAnalysisThread != nullptr)
+                notifyAnalysisThread();
+        //}
     }
 
     AudioSampleBuffer getAnalysisBuffer (int numSamplesRequired)
@@ -73,7 +82,12 @@ public:
             
             if (readIndex + numSamplesRequired <= circleBuffer.getNumSamples())
             {
-                buffer.copyFrom (0, 0, circleBuffer, 0, readIndex, numSamplesRequired);
+                for (int index = 0; index < numSamplesRequired; index++)
+                {
+                    int rIndex = index + readIndex;
+                    buffer.setSample (0, index, circleBuffer.getReadPointer (0)[rIndex] * gain);
+                }
+                //buffer.copyFrom (0, 0, circleBuffer, 0, readIndex, numSamplesRequired);
                 //buffer.copyFrom (1, 0, circleBuffer, 1, spectralReadPosition, numSamplesRequired);
             }
             else
@@ -81,21 +95,20 @@ public:
                 for (int index = 0; index < numSamplesRequired; index++)
                 {
                     const int modIndex = (index + readIndex) % circleBuffer.getNumSamples();
-                    buffer.setSample (0, index, circleBuffer.getReadPointer (0)[modIndex]);
+                    buffer.setSample (0, index, circleBuffer.getReadPointer (0)[modIndex] * gain);
                     //buffer.setSample (1, index, circleBuffer.getReadPointer (1)[modIndex]);
                 }
             }
-            updateSpectralBufferVisualiser (buffer);
+            updateBufferToDraw (buffer);
         }
-        analysisBufferNeedsUpdating.set (1);
         return buffer;
     }
     
-    void updateSpectralBufferVisualiser (AudioSampleBuffer& buffer)
+    void updateBufferToDraw (AudioSampleBuffer& buffer)
     {
-        if (spectralBufferUpdated != nullptr)
+        if (bufferToDrawUpdated != nullptr)
         {
-            spectralBufferUpdated (buffer);
+            bufferToDrawUpdated (buffer);
         }
     }
 
@@ -110,21 +123,26 @@ public:
         return false;
             
     }
-    void setSpectralBufferUpdatedCallback (std::function<void (AudioSampleBuffer&)> f) { spectralBufferUpdated = f; }
+
+    void setBufferToDrawUpdatedCallback  (std::function<void (AudioSampleBuffer&)> f) { bufferToDrawUpdated = f; }
+    void setNotifyAnalysisThreadCallback (std::function<void()> f)                    { notifyAnalysisThread = f; }
 
     void toggleCollectInput         (bool shouldCollectInput) noexcept { clearBuffer(); collectInput = shouldCollectInput; }
     void setExpectedSamplesPerBlock (int spb)                 noexcept { expectedSamplesPerBlock = spb; }
+
     void clearBuffer() { circleBuffer.clear(); }
     void setChannelToCollect (int c) { channelToCollect = c; }
+    void setGain (float g) { gain = g; }
 private:
     AudioSampleBuffer                        circleBuffer;
-    std::function<void (AudioSampleBuffer&)> spectralBufferUpdated;
+    std::function<void (AudioSampleBuffer&)> bufferToDrawUpdated;
+    std::function<void()>                    notifyAnalysisThread;
+    float gain                               { 1.0f };
+    Atomic<int> analysisBufferUpdating       { 0 };
     int writeIndex                           { 0 };
     int readIndex                            { 0 };
     int expectedSamplesPerBlock              { 512 };
     int channelToCollect                     { 0 };
-    Atomic<int> analysisBufferUpdating       { 0 };
-    Atomic<int> analysisBufferNeedsUpdating  { 1 };
     bool collectInput                        { true };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioDataCollector)
