@@ -30,7 +30,7 @@ The address of this bundle can also be set from the app. The bundle will contain
 #Amplitude
 Onset - the onset value will be 1 when an onset is detected and 0 otherwise.
 
-RMS - the root-mean-squared amplitude of the audio signal. This is the average 'volume' of the signal.
+RMS (Amplitude) - the root-mean-squared amplitude of the audio signal. This is the average 'volume' of the signal.
 
 #Spectral
 Centroid (0 - 1)  - the spectral centroid of the signal. This can be a good indication of the 'brightness' of a sound.
@@ -47,8 +47,7 @@ Slope    (-1 - 1) - the spectral slope of the signal. The 'gradient' of the spec
 
 The harmonic features are still in development - there should be an updated (working) version coming very soon.
 
-F0 Estimation (0 - 1) - a very crude estimation of the fundamental frequency. It is currently normalised between C0 (16.35Hz) and B8
-                        (7902.13Hz).
+F0 Estimation (Pitch, 0 - 1) - a very crude estimation of the fundamental frequency. It is currently normalised between 0 and 20000 Hz
 
 Harmonic Energy Ratio (HER) - an estimation of how much harmonic energy there is in the signal. Again, it's a crude estimate. This
                               could be used as an indication of how 'out of tune' or 'detuned' the audio is. It will also be high in
@@ -57,9 +56,6 @@ Harmonic Energy Ratio (HER) - an estimation of how much harmonic energy there is
 Inharmonicity - still in development.
 
 #OSC Bundle Structure
-The OSC bundle will contain 9 floats in the following order:
+The OSC bundle will contain 4 floats in the following order:
 
-onset, RMS, centroid, flatness, spread, slope, F0, HER, Inharmonicity
-
-The harmonic features will be updated on a slower basis than the non-harmonic featues. 
-
+Onset (1 or 0 - onset or no onset), Amplitude (0 - 1), Pitch (0 - 1), Centroid (0 - 1, dull - bright)
