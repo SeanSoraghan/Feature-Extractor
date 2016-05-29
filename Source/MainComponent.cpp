@@ -42,19 +42,17 @@ public:
             audioAnalyser.notify();
         });
 
-        oscFeatureSender.onsetDetectedCallback = ([this] () 
+        audioAnalyser.setOnsetDetectedCallback ([this] () 
         {
-            view.featureTriggered (OSCFeatureAnalysisOutput::OSCFeatureType::Onset);            
+            view.featureTriggered (AudioFeatures::eAudioFeature::enOnset);            
         });
 
         deviceManager.addAudioCallback (&audioDataCollector);
         audioFilePlayer.setupAudioCallback (deviceManager);
 
-        view.setFeatureValueQueryCallback ([this] (OSCFeatureAnalysisOutput::OSCFeatureType oscf, float maxValue) 
+        view.setFeatureValueQueryCallback ([this] (AudioFeatures::eAudioFeature featureType, float maxValue) 
         { 
-            if ( ! OSCFeatureAnalysisOutput::isTriggerFeature (oscf))
-                return oscFeatureSender.getRunningAverage (oscf) / maxValue;
-            return 0.0f;
+            return audioAnalyser.getAudioFeature (featureType) / maxValue;
         });
 
         //switches between listening to input or output
@@ -98,12 +96,12 @@ public:
         //Overlapped audio visuals
         view.getPitchEstimationVisualiser().getFFTBufferVisualiser().setGetBufferCallback ([this]()
         {
-            return audioAnalyser.getPitchAnalyser().getFFTBufferToDraw();
+            return audioAnalyser.getFFTAnalyser().getFFTBufferToDraw();
         });
 
         view.getPitchEstimationVisualiser().getFFTBufferVisualiser().setTagBufferForUpdateCallback ([this]()
         {
-            audioAnalyser.getPitchAnalyser().enableFFTBufferToDrawNeedsUpdating();
+            audioAnalyser.getFFTAnalyser().enableFFTBufferToDrawNeedsUpdating();
         });
 
         //autocorrelation visuals
@@ -136,14 +134,14 @@ public:
         //Pitch value visuals
         view.getPitchEstimationVisualiser().setGetPitchEstimateCallback ([this]()
         {
-            return audioAnalyser.getPitchEstimate();
+            return audioAnalyser.getAudioFeature (AudioFeatures::eAudioFeature::enF0);
         });
 
         view.setGainChangedCallback ([this] (float g) { audioDataCollector.setGain (g); });
 
-        view.setOnsetSensitivityCallback   ([this] (float s)                              { oscFeatureSender.setOnsetDetectionSensitivity (s); });
-        view.setOnsetWindowSizeCallback    ([this] (int s)                                { oscFeatureSender.setOnsetWindowLength (s); });
-        view.setOnsetDetectionTypeCallback ([this] (OnsetDetector::eOnsetDetectionType t) { oscFeatureSender.setOnsetDetectionType (t); });
+        view.setOnsetSensitivityCallback   ([this] (float s)                              { audioAnalyser.setOnsetDetectionSensitivity (s); });
+        view.setOnsetWindowSizeCallback    ([this] (int s)                                { audioAnalyser.setOnsetWindowLength (s); });
+        view.setOnsetDetectionTypeCallback ([this] (OnsetDetector::eOnsetDetectionType t) { audioAnalyser.setOnsetDetectionType (t); });
         view.setPlayPressedCallback        ([this] ()                                     { audioFilePlayer.play(); audioDataCollector.clearBuffer(); });
         view.setPausePressedCallback       ([this] ()                                     { audioFilePlayer.pause(); audioDataCollector.clearBuffer(); });
         view.setStopPressedCallback        ([this] ()                                     { audioFilePlayer.stop(); audioDataCollector.clearBuffer(); });

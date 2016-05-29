@@ -34,8 +34,9 @@ public:
         addAndMakeVisible (audioDeviceSelector);
         addAndMakeVisible (audioScrollingDisplay);
 
-        for (int i = 0; i < (int) OSCFeatureAnalysisOutput::OSCFeatureType::NumFeatures; i++)
-            featureListModel.addFeature ((OSCFeatureAnalysisOutput::OSCFeatureType) i);
+        for (int i = 0; i < (int) AudioFeatures::eAudioFeature::numFeatures; i++)
+            if (i <= AudioFeatures::eAudioFeature::enCentroid)
+                featureListModel.addFeature ((AudioFeatures::eAudioFeature) i);
         
         featureListView.recreateVisualisersFromModel();
         
@@ -98,7 +99,7 @@ public:
         gainLabel.setBounds  (gainBounds.removeFromLeft (gainBounds.getWidth() / 2));
         gainSlider.setBounds (gainBounds);
 
-        pitchEstimationVisualiser.setBounds (getLocalBounds().withSizeKeepingCentre (400, 400));
+        //pitchEstimationVisualiser.setBounds (getLocalBounds().withSizeKeepingCentre (400, 400));
     }
 
     void sliderValueChanged (Slider* s) override
@@ -134,7 +135,7 @@ public:
 
     void clearAudioDisplayData()                                                                                          { audioScrollingDisplay.clear(); }
 
-    void featureTriggered (OSCFeatureAnalysisOutput::OSCFeatureType triggerType)                                          
+    void featureTriggered (AudioFeatures::eAudioFeature triggerType)                                          
     { 
         MessageManager::getInstance()->callAsync ([this, triggerType]()
         {
@@ -145,7 +146,7 @@ public:
     void setOnsetSensitivityCallback   (std::function<void (float)> f)                                                     { featureListView.setOnsetSensitivityCallback (f); }
     void setOnsetWindowSizeCallback    (std::function<void (int)> f)                                                       { featureListView.setOnsetWindowLengthCallback (f); }
     void setOnsetDetectionTypeCallback (std::function<void (OnsetDetector::eOnsetDetectionType)> f)                        { featureListView.setOnsetDetectionTypeCallback (f); }
-    void setFeatureValueQueryCallback  (std::function<float (OSCFeatureAnalysisOutput::OSCFeatureType, float maxValue)> f) { featureListView.setFeatureValueQueryCallback (f); }
+    void setFeatureValueQueryCallback  (std::function<float (AudioFeatures::eAudioFeature, float maxValue)> f)             { featureListView.setFeatureValueQueryCallback (f); }
     void setGainChangedCallback        (std::function<void (float)> f)                                                     { gainChangedCallback = f; }
 
 private:

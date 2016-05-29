@@ -17,111 +17,7 @@ typedef ConcatenatedFeatureBuffer::Feature Feature;
 
 
 
-//==============================================================================
-//==============================================================================
-class OnsetDetector
-{
-public:
-    enum eOnsetDetectionType
-    {
-        enSpectral = 0,
-        enAmplitude,
-        enCombination,
-        enNumTypes
-    };
 
-    static String getStringForDetectionType (eOnsetDetectionType t)
-    {
-        switch (t)
-        {
-            case enSpectral:
-                return String ("Spectral");
-            case enAmplitude:
-                return String ("Amplitude");
-            case enCombination:
-                return String ("Combination");
-            default:
-                jassertfalse;
-                return String ("UNKNOWN");
-        }
-    }
-
-    OnsetDetector()
-    :   spectralFluxHistory (5),
-        ampHistory          (5),
-        type                (enAmplitude)
-    {}
-
-    void addSpectralFluxAndAmpValue (float sf, float amp)
-    {
-        spectralFluxHistory.insertNewValueAndupdateHistory (sf);
-        ampHistory.insertNewValueAndupdateHistory (amp);
-    }
-
-    bool detectOnset()
-    {
-        jassert (ampHistory.history.size() == spectralFluxHistory.history.size());
-        //avoid division by 0
-        if (ampHistory.recordedHistory == 0 || spectralFluxHistory.recordedHistory == 0)
-            return false;
-
-        if (spectralFluxHistory.recordedHistory < (int) spectralFluxHistory.history.size()
-            || ampHistory.recordedHistory < (int) ampHistory.history.size())
-            return false;
-
-        float meanSpectralFlux = spectralFluxHistory.getTotal() / spectralFluxHistory.recordedHistory;
-        float meanAmp          = ampHistory.getTotal() / ampHistory.recordedHistory;
-        
-        int onsetCandidteIndex = spectralFluxHistory.history.size() - 1;
-
-        if (type == enSpectral || type == enCombination)
-            onsetCandidteIndex = spectralFluxHistory.history.size() / 2;
-
-        float candidateSF      = spectralFluxHistory.history[onsetCandidteIndex];
-        float candidateAmp     = ampHistory.history[onsetCandidteIndex];
-
-        float ampThreshold = 0.01f;
-       
-        if (candidateAmp < ampThreshold)
-            return false;
-
-        for (int i = 0; i < (int) spectralFluxHistory.history.size(); i++)
-        {
-            if (i != onsetCandidteIndex)
-            {
-                float neighbourFlux = spectralFluxHistory.history[i];
-                float neighbourAmp  = ampHistory.history[i];
-
-                if (neighbourAmp >= candidateAmp && (type == enAmplitude || type == enCombination))
-                    return false;
-
-                if (neighbourFlux >= candidateSF && (type == enSpectral || type == enCombination))
-                    return false;
-            }
-        }
-
-        bool onsetSpectral  = candidateSF  > meanSpectralFlux * meanThresholdMultiplier;
-        bool onsetAmplitude = candidateAmp > meanAmp * meanThresholdMultiplier;
-
-        switch (type)
-        {
-            case enAmplitude:
-                return onsetAmplitude;
-            case enSpectral:
-                return onsetSpectral;
-            case enCombination:
-                return onsetAmplitude && onsetSpectral;
-            default:
-                jassertfalse;
-                return false;
-        }
-    }
-
-    ValueHistory        spectralFluxHistory;
-    ValueHistory        ampHistory;
-    eOnsetDetectionType type;
-    float               meanThresholdMultiplier { 1.7f };
-};
 
 //==============================================================================
 //==============================================================================
@@ -184,89 +80,30 @@ public:
 
     void timerCallback ()
     {
-        if (realTimeAudioFeatures.getSpectralFeatures().audioOutput.getNumSamples() > 0)
-            sendSpectralFeaturesViaOSC (realTimeAudioFeatures.getHarmonicFeatures().audioOutput.getNumSamples() > 0);
+        sendSpectralFeaturesViaOSC (true);
     }
 
     void sendSpectralFeaturesViaOSC (bool updateHarmonicFeatures)
     {
-        float rmsLevel = getRunningAverageAndUpdateHistory (Feature::Audio, OSCFeatureType::RMS);
-        float centroid = getRunningAverageAndUpdateHistory (Feature::Centroid, OSCFeatureType::Centroid);
-        float flatness = getRunningAverageAndUpdateHistory (Feature::Flatness, OSCFeatureType::Flatness);
-        float spread =   getRunningAverageAndUpdateHistory (Feature::Spread, OSCFeatureType::Spread);
-        float slope =    getRunningAverageAndUpdateHistory (Feature::Slope, OSCFeatureType::Slope);
-        float onset =    detectOnset ();  
+        float rmsLevel = realTimeAudioFeatures.getAudioFeature (AudioFeatures::eAudioFeature::enRMS);
+        float centroid = realTimeAudioFeatures.getAudioFeature (AudioFeatures::eAudioFeature::enCentroid);
+        float flatness = realTimeAudioFeatures.getAudioFeature (AudioFeatures::eAudioFeature::enFlatness);
+        float spread =   realTimeAudioFeatures.getAudioFeature (AudioFeatures::eAudioFeature::enSpread);
+        float slope =    realTimeAudioFeatures.getAudioFeature (AudioFeatures::eAudioFeature::enSlope);
+        float onset =    realTimeAudioFeatures.getAudioFeature (AudioFeatures::eAudioFeature::enOnset);  
         if (updateHarmonicFeatures)
         {
-            float f0     =  getRunningAverageAndUpdateHistory (Feature::F0, OSCFeatureType::F0);
-            float her    =  getRunningAverageAndUpdateHistory (Feature::HER, OSCFeatureType::HER);
-            float inharm =  getRunningAverageAndUpdateHistory (Feature::Inharmonicity, OSCFeatureType::Inharmonicity);  
+            float f0     =  realTimeAudioFeatures.getAudioFeature (AudioFeatures::eAudioFeature::enF0);
+            float her    =  realTimeAudioFeatures.getAudioFeature (AudioFeatures::eAudioFeature::enHarmonicEnergyRatio);
+            float inharm =  realTimeAudioFeatures.getAudioFeature (AudioFeatures::eAudioFeature::enInharmonicity);  
             //DBG("F0 estimation: "<<f0<<" |her: "<<her<<" |inharm: "<<inharm);
-            sender.send (bundleAddress, onset, rmsLevel, centroid, flatness, spread, slope, f0 / (7902.13f/* B8 */ - 16.35f/* C0 */), her, inharm);
+            //sender.send (bundleAddress, onset, rmsLevel, centroid, flatness, spread, slope, f0, her, inharm);
+            sender.send (bundleAddress, onset, rmsLevel, f0, centroid);
         }
         else
         {
-            sender.send (bundleAddress, onset, rmsLevel, centroid, flatness, spread, slope);
+            //sender.send (bundleAddress, onset, rmsLevel, centroid, flatness, spread, slope);
         }  
-    }
-
-    float getRunningAverage (OSCFeatureType oscf)
-    {
-        jassert (oscf != OSCFeatureType::Onset);
-
-        ValueHistory rms = featureHistories[OSCFeatureType::RMS];
-        float rmsAverage = rms.getTotal() / (float) rms.recordedHistory;
-        if (rmsAverage > 0.01f)
-        {
-            ValueHistory& h = featureHistories[oscf - 1];
-            return h.getTotal() / (float) h.recordedHistory;
-        }
-        return 0.0f;
-    }
-
-    float detectOnset ()
-    {
-        float currentValue = realTimeAudioFeatures.getSpectralFeatures().getAverageFeatureSample (Feature::Flux, 0);
-        
-        /* RMS or magnitude? */
-        float amp = realTimeAudioFeatures.getSpectralFeatures().getMaxAmplitude();
-        //float amp = realTimeAudioFeatures.getSpectralFeatures().getAverageRMSLevel();
-        //
-        onsetDetector.addSpectralFluxAndAmpValue (currentValue, amp);
-        return onsetDetector.detectOnset() ? 1.0f : 0.0f;
-    }
-
-    float getRunningAverageAndUpdateHistory (Feature f, OSCFeatureType oscf)
-    {
-        /* use detectOnset() for onsets */
-        jassert (oscf != OSCFeatureType::Onset);
-        
-        float currentValue = 0.0f;
-
-        if (oscf == OSCFeatureType::RMS)
-            currentValue = realTimeAudioFeatures.getSpectralFeatures().getAverageRMSLevel();// max amp or rms?
-        else if (ConcatenatedFeatureBuffer::isFeatureSpectral (f))
-            currentValue = realTimeAudioFeatures.getSpectralFeatures().getAverageFeatureSample (f, 0);
-        else
-            currentValue = realTimeAudioFeatures.getHarmonicFeatures().getAverageFeatureSample (f, 0);
-        
-        ValueHistory& h = featureHistories[oscf - 1];
-        
-        float returnValue = currentValue;
-        if (h.recordedHistory >= 1)
-        {
-            float average = h.getTotal() / h.recordedHistory;
-            if (currentValue < 1.3f * average && currentValue > 0.7f * average)
-                returnValue = (h.getTotal() + currentValue) / (h.recordedHistory + 1);
-        }
-
-        float eps = 0.0001f;
-
-        if (returnValue < eps)
-            returnValue = 0.0f;
-
-        h.insertNewValueAndupdateHistory (returnValue);
-        return returnValue;
     }
 
     bool connectToAddress (String newAddress)
@@ -292,25 +129,9 @@ public:
         }
     }
 
-    void setOnsetDetectionSensitivity (float s)
-    {
-        jassert (s >= 0.0f);
-        onsetDetector.meanThresholdMultiplier = 1.0f + s;
-    }
-
-    void setOnsetWindowLength (int length)
-    {
-        onsetDetector.ampHistory.setHistoryLength          (length);
-        onsetDetector.spectralFluxHistory.setHistoryLength (length);
-    }
-
-    void setOnsetDetectionType (OnsetDetector::eOnsetDetectionType t) { onsetDetector.type = t; }
-
     RealTimeAnalyser&         realTimeAudioFeatures;
     OSCSender                 sender;
-    OnsetDetector             onsetDetector;
     std::vector<ValueHistory> featureHistories;
-    std::function<void()>     onsetDetectedCallback;
     String                    address;
     String bundleAddress      { String("/Audio/Features") };
 };
