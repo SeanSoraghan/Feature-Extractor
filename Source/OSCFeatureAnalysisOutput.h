@@ -98,7 +98,8 @@ public:
             float inharm =  realTimeAudioFeatures.getAudioFeature (AudioFeatures::eAudioFeature::enInharmonicity);  
             //DBG("F0 estimation: "<<f0<<" |her: "<<her<<" |inharm: "<<inharm);
             //sender.send (bundleAddress, onset, rmsLevel, centroid, flatness, spread, slope, f0, her, inharm);
-            sender.send (bundleAddress, onset, rmsLevel, f0, centroid);
+            DBG("flatness: " << flatness);
+            sender.send (bundleAddress, onset, rmsLevel, f0, centroid, flatness);
         }
         else
         {

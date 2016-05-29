@@ -38,6 +38,8 @@ public:
             if (i <= AudioFeatures::eAudioFeature::enCentroid)
                 featureListModel.addFeature ((AudioFeatures::eAudioFeature) i);
         
+        featureListModel.addFeature (AudioFeatures::enFlatness);
+
         featureListView.recreateVisualisersFromModel();
         
         addAndMakeVisible (featureListView);
