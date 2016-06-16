@@ -12,6 +12,9 @@
 #define INCLUDE_H_INCLUDED
 
 #include "../JuceLibraryCode/JuceHeader.h"
+#include "CustomChannelSelector.h"
+#include "CustomAudioSettingsComponent.h"
+
 #include "FeatureExtractorLookAndFeel.h"
 
 #include "AudioFilePlayer.h"

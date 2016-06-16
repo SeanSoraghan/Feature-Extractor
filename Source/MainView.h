@@ -116,7 +116,7 @@ public:
 
     void setAudioSettingsDeviceManager (AudioDeviceManager& deviceManager)
     {
-        addAndMakeVisible (audioDeviceSelector = new AudioDeviceSelectorComponent (deviceManager, 2, 2, 2, 2, false, false, true, true));
+        addAndMakeVisible (audioDeviceSelector = new CustomAudioDeviceSelectorComponent (deviceManager, 2, 2, 2, 2, false, false, true, true));
         resized();
     }
 
@@ -157,7 +157,7 @@ private:
     Slider                                      gainSlider;
     AudioVisualiserComponent                    audioScrollingDisplay;
     AudioFileTransportController                audioFileTransportController;
-    ScopedPointer<AudioDeviceSelectorComponent> audioDeviceSelector;
+    ScopedPointer<CustomAudioDeviceSelectorComponent> audioDeviceSelector;
     FeatureListModel                            featureListModel;
     FeatureListView                             featureListView;
     OSCSettingsController                       oscSettingsController;
