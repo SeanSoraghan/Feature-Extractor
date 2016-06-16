@@ -232,6 +232,7 @@ private:
 
             if (error.isNotEmpty())
             {
+                jassertfalse;
                 //xxx
             }
         }

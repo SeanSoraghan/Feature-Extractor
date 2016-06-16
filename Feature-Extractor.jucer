@@ -40,6 +40,8 @@
                 file="Source/CustomChannelSelectorPanel.h"/>
         </GROUP>
         <FILE id="kCcEzn" name="AnalyserTrack.h" compile="0" resource="0" file="Source/AnalyserTrack.h"/>
+        <FILE id="RBzA6d" name="AnalyserTrackController.h" compile="0" resource="0"
+              file="Source/AnalyserTrackController.h"/>
         <FILE id="DJc3Zm" name="AudioFeaturesListComponent.h" compile="0" resource="0"
               file="Source/AudioFeaturesListComponent.h"/>
         <FILE id="Frk5aD" name="AudioFileTransportComponent.h" compile="0"

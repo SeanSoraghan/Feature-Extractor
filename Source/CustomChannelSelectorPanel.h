@@ -19,6 +19,7 @@ public:
     :   setup (setupDetails)
     {
         setup.manager->addChangeListener (this);
+        updateControls();
     }
 
     ~ChannelSelectorPanel()

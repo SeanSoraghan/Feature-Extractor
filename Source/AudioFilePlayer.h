@@ -26,10 +26,16 @@ public:
         audioTransportSource.setSource (nullptr);
         audioSourcePlayer.setSource (nullptr);
     }
+
     void setupAudioCallback (AudioDeviceManager& deviceManager)
     {
         deviceManager.addAudioCallback (&audioSourcePlayer);
         audioSourcePlayer.setSource    (&audioTransportSource);
+    }
+
+    AudioSourcePlayer* getAudioSourcePlayer()
+    {
+        return &audioSourcePlayer;
     }
 
     void loadFileIntoTransport (const File& audioFile)
@@ -66,7 +72,6 @@ private:
     AudioSourcePlayer                      audioSourcePlayer;
     AudioTransportSource                   audioTransportSource;
     ScopedPointer<AudioFormatReaderSource> currentAudioFileSource;
-
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioFilePlayer)
 };
 

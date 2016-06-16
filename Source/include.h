@@ -39,7 +39,10 @@
 #include "PitchEstimationVisualiser.h"
 #include "OSCSettings.h"
 #include "AnalyserTrack.h"
+#include "AnalyserTrackController.h"
 #include "MainView.h"
+
+
 
 
 #endif  // INCLUDE_H_INCLUDED

@@ -18,7 +18,8 @@
 class AudioDataCollector : public AudioIODeviceCallback
 {
 public:
-    AudioDataCollector() 
+    AudioDataCollector (int audioChannelToCollect)
+    :   channelToCollect (audioChannelToCollect)
     {
         circleBuffer.setSize (1, 4096);
         circleBuffer.clear();
@@ -30,8 +31,8 @@ public:
     void audioDeviceStopped() override
     {}
 
-    void audioDeviceIOCallback (const float** inputChannelData, int /*numInputChannels*/,
-                                float** outputChannelData, int /*numOutputChannels*/,
+    void audioDeviceIOCallback (const float** inputChannelData, int numInputChannels,
+                                float** outputChannelData, int numOutputChannels,
                                 int numberOfSamples) override
     {
         //const float** channelData = collectInput ? inputChannelData : outputChannelData;
@@ -43,7 +44,14 @@ public:
 
         //if (analysisBufferNeedsUpdating.get() == 1)
         //{
+            ignoreUnused (numInputChannels);
+            ignoreUnused (numOutputChannels);
             const float** channelData = collectInput ? inputChannelData : outputChannelData;
+
+            if (collectInput)
+                jassert (numInputChannels >= channelToCollect);
+            if (!collectInput)
+                jassert (numOutputChannels >= channelToCollect);
 
             analysisBufferUpdating.set (1);
 

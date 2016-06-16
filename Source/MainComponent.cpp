@@ -15,160 +15,37 @@
 /*
     Application for linking up audio device manager with different GUI elements
 */
-class MainContentComponent   : public AudioAppComponent
+class MainContentComponent   : public  AudioAppComponent,
+                               private ChangeListener
 {
 public:
     //==============================================================================
     MainContentComponent() 
-    :   audioAnalyser    (audioDataCollector), 
-        oscFeatureSender (audioAnalyser)
+    
     {
         setSize (800, 600);
         // specify the number of input and output channels that we want to open
         setAudioChannels  (2, 2);
-        addAndMakeVisible (view);
         
+        deviceManager.addChangeListener (this);
+        
+        view.setAudioSettingsDeviceManager (deviceManager);
         //deviceManager.addAudioCallback (&view.getAudioDisplayComponent());
-        audioDataCollector.setBufferToDrawUpdatedCallback ([this] (AudioSampleBuffer& b) 
-        {
-            MessageManager::getInstance()->callAsync ([this, b]()
-            {
-                view.getAudioDisplayComponent().pushBuffer (b);
-            });
-        });
+        updateAnalysisTracksFromDeviceManager (&deviceManager);
 
-        audioDataCollector.setNotifyAnalysisThreadCallback ([this]()
-        {
-            audioAnalyser.notify();
-        });
-
-        audioAnalyser.setOnsetDetectedCallback ([this] () 
-        {
-            view.featureTriggered (AudioFeatures::eAudioFeature::enOnset);            
-        });
-
-        deviceManager.addAudioCallback (&audioDataCollector);
-        audioFilePlayer.setupAudioCallback (deviceManager);
-
-        view.setFeatureValueQueryCallback ([this] (AudioFeatures::eAudioFeature featureType, float maxValue) 
-        { 
-            return audioAnalyser.getAudioFeature (featureType) / maxValue;
-        });
-
-        //switches between listening to input or output
-        view.setAudioSourceTypeChangedCallback ([this] (eAudioSourceType type) 
-        { 
-            bool input = type == eAudioSourceType::enIncomingAudio;
-                                                           
-            if (input)
-                audioFilePlayer.stop();
-                                                            
-            audioDataCollector.toggleCollectInput (input);
-            view.toggleShowTransportControls (type == eAudioSourceType::enAudioFile);
-            view.clearAudioDisplayData();
-        });
-
-        view.setChannelTypeChangedCallback ([this] (eChannelType t) { audioDataCollector.setChannelToCollect ((int) t); });
-        
-        view.setFileDroppedCallback ([this] (File& f) 
-        { 
-            audioDataCollector.clearBuffer();
-            view.clearAudioDisplayData();
-            audioFilePlayer.loadFileIntoTransport (f); 
-
-            if (audioFilePlayer.hasFile())
-                view.setAudioTransportState (AudioFileTransportController::eAudioTransportState::enFileStopped);
-            else
-                view.setAudioTransportState (AudioFileTransportController::eAudioTransportState::enNoFileSelected);
-        } );
-
-        //Overlapped audio visuals
-        view.getPitchEstimationVisualiser().getOverlappedBufferVisualiser().setGetBufferCallback ([this]()
-        {
-            return audioAnalyser.getOverlapper().getBufferToDraw();
-        });
-
-        view.getPitchEstimationVisualiser().getOverlappedBufferVisualiser().setTagBufferForUpdateCallback ([this]()
-        {
-            audioAnalyser.getOverlapper().enableBufferToDrawNeedsUpdating();
-        });
-
-        //Overlapped audio visuals
-        view.getPitchEstimationVisualiser().getFFTBufferVisualiser().setGetBufferCallback ([this]()
-        {
-            return audioAnalyser.getFFTAnalyser().getFFTBufferToDraw();
-        });
-
-        view.getPitchEstimationVisualiser().getFFTBufferVisualiser().setTagBufferForUpdateCallback ([this]()
-        {
-            audioAnalyser.getFFTAnalyser().enableFFTBufferToDrawNeedsUpdating();
-        });
-
-        //autocorrelation visuals
-        view.getPitchEstimationVisualiser().getAutoCorrelationBufferVisualiser().setGetBufferCallback ([this]()
-        {
-            return audioAnalyser.getPitchAnalyser().getAutoCorrelationBufferToDraw();
-        });
-
-        view.getPitchEstimationVisualiser().getAutoCorrelationBufferVisualiser().setTagBufferForUpdateCallback ([this]()
-        {
-            audioAnalyser.getPitchAnalyser().enableAutoCorrelationBufferToDrawNeedsUpdating();
-        });
-
-        //cumulative differnece visuals
-        view.getPitchEstimationVisualiser().getCumulativeDifferenceBufferVisualiser().setGetBufferCallback ([this]()
-        {
-            return audioAnalyser.getPitchAnalyser().getCumulativeDifferenceBufferToDraw();
-        });
-
-        view.getPitchEstimationVisualiser().getCumulativeDifferenceBufferVisualiser().setGetPeakPositionCallback ([this]()
-        {
-            return audioAnalyser.getPitchAnalyser().getNormalisedLagPosition();
-        });
-
-        view.getPitchEstimationVisualiser().getCumulativeDifferenceBufferVisualiser().setTagBufferForUpdateCallback ([this]()
-        {
-            audioAnalyser.getPitchAnalyser().enableCumulativeDifferenceBufferNeedsUpdating();
-        });
-
-        //Pitch value visuals
-        view.getPitchEstimationVisualiser().setGetPitchEstimateCallback ([this]()
-        {
-            return audioAnalyser.getAudioFeature (AudioFeatures::eAudioFeature::enF0);
-        });
-
-        view.setGainChangedCallback ([this] (float g) { audioDataCollector.setGain (g); });
-
-        view.setOnsetSensitivityCallback   ([this] (float s)                              { audioAnalyser.setOnsetDetectionSensitivity (s); });
-        view.setOnsetWindowSizeCallback    ([this] (int s)                                { audioAnalyser.setOnsetWindowLength (s); });
-        view.setOnsetDetectionTypeCallback ([this] (OnsetDetector::eOnsetDetectionType t) { audioAnalyser.setOnsetDetectionType (t); });
-        view.setPlayPressedCallback        ([this] ()                                     { audioFilePlayer.play(); audioDataCollector.clearBuffer(); });
-        view.setPausePressedCallback       ([this] ()                                     { audioFilePlayer.pause(); audioDataCollector.clearBuffer(); });
-        view.setStopPressedCallback        ([this] ()                                     { audioFilePlayer.stop(); audioDataCollector.clearBuffer(); });
-        view.setRestartPressedCallback     ([this] ()                                     { audioFilePlayer.restart(); });
-
-        view.setAddressChangedCallback       ([this] (String address) { return oscFeatureSender.connectToAddress (address); });
-        view.setBundleAddressChangedCallback ([this] (String address) { oscFeatureSender.bundleAddress = address; });
-
-        view.setAudioSettingsDeviceManager   (deviceManager);
-        view.setDisplayedOSCAddress          (oscFeatureSender.address);
-        view.setDisplayedBundleAddress       (oscFeatureSender.bundleAddress);
+        addAndMakeVisible (view);
     }
 
     ~MainContentComponent()
     {
-        audioAnalyser.stopThread (100);
+        deviceManager.removeChangeListener (this);
         shutdownAudio();
     }
 
     //=======================================================================
     void prepareToPlay (int samplesPerBlockExpected, double sampleRate) override
     {
-        audioAnalyser.stopThread (100);
-        audioAnalyser.sampleRateChanged (sampleRate);
-        view.getAudioDisplayComponent().setSamplesPerBlock (samplesPerBlockExpected);
-        audioAnalyser.startThread (4);
-        audioDataCollector.setExpectedSamplesPerBlock (samplesPerBlockExpected);
+        //call prepare to play on all tracks.
     }
 
     void getNextAudioBlock (const AudioSourceChannelInfo& bufferToFill) override
@@ -200,13 +77,45 @@ public:
         view.setBounds (getLocalBounds());
     }
 
+    void addAnalyserTrack (int channelToAnalyse)
+    {
+        analyserControllers.add (new AnalyserTrackController (deviceManager, channelToAnalyse));
+        view.addAnalyserTrack (*analyserControllers.getLast());
+    }
+
+    void changeListenerCallback (ChangeBroadcaster* broadcaster) override
+    {
+        juce::AudioDeviceManager* adm = dynamic_cast<juce::AudioDeviceManager*>(broadcaster);
+        if (adm != nullptr)
+        {
+            updateAnalysisTracksFromDeviceManager (adm);
+        }
+        else
+        {
+            jassertfalse;
+        }
+    }
+
+    void updateAnalysisTracksFromDeviceManager (AudioDeviceManager* dm)
+    {
+        analyserControllers.clear();
+        view.clearAnalyserTracks();
+        const auto currentDevice = dm->getCurrentAudioDevice();
+        const auto activeInputs  = currentDevice->getActiveInputChannels();
+        int channel = activeInputs.findNextSetBit (0);
+        while (channel >= 0)
+        {
+            addAnalyserTrack (channel);
+            DBG("Set Channel: "<<channel);
+            channel = activeInputs.findNextSetBit (channel + 1);            
+        }
+    }
+
 private:
     SharedResourcePointer<FeatureExtractorLookAndFeel> lookAndFeel;
-    MainView                 view;
-    AudioFilePlayer          audioFilePlayer;
-    AudioDataCollector       audioDataCollector;
-    RealTimeAnalyser         audioAnalyser;
-    OSCFeatureAnalysisOutput oscFeatureSender;
+    OwnedArray<AnalyserTrackController>                analyserControllers;
+    MainView                                           view;
+    
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainContentComponent)
 };
