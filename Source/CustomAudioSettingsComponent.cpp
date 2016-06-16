@@ -9,7 +9,8 @@
 */
 
 #include "../JuceLibraryCode/JuceHeader.h"
-#include "CustomChannelSelector.h"
+#include "CustomChannelSelectorController.h"
+#include "CustomChannelSelectorPanel.h"
 #include "CustomAudioSettingsComponent.h"
 /*
   ==============================================================================
@@ -34,7 +35,6 @@
 
   ==============================================================================
 */
-
 class CustomSimpleDeviceManagerInputLevelMeter  : public Component,
                                                   public Timer
 {
@@ -81,11 +81,9 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CustomSimpleDeviceManagerInputLevelMeter)
 };
-
-
 //==============================================================================
 class CustomAudioDeviceSelectorComponent::MidiInputSelectorComponentListBox  : public ListBox,
-                                                                         private ListBoxModel
+                                                                               private ListBoxModel
 {
 public:
     MidiInputSelectorComponentListBox (AudioDeviceManager& dm, const String& noItems)
@@ -198,10 +196,8 @@ private:
 
 //==============================================================================
 
-
 static String getNoDeviceString()   { return "<< " + TRANS("none") + " >>"; }
 
-//==============================================================================
 class AudioDeviceSettingsPanel : public Component,
                                  private ChangeListener,
                                  private ComboBoxListener,  // (can't use ComboBox::Listener due to idiotic VC2005 bug)
@@ -263,19 +259,6 @@ public:
                 r.removeFromTop (space);
             }
 
-            if (outputChanList != nullptr)
-            {
-                outputChanList->setBounds (r.removeFromTop (outputChanList->getBestHeight (maxListBoxHeight)));
-                outputChanLabel->setBounds (0, outputChanList->getBounds().getCentreY() - h / 2, r.getX(), h);
-                r.removeFromTop (space);
-            }
-
-            if (inputChanList != nullptr)
-            {
-                inputChanList->setBounds (r.removeFromTop (inputChanList->getBestHeight (maxListBoxHeight)));
-                inputChanLabel->setBounds (0, inputChanList->getBounds().getCentreY() - h / 2, r.getX(), h);
-                r.removeFromTop (space);
-            }
 
             r.removeFromTop (space * 2);
 
@@ -444,48 +427,6 @@ public:
 
         if (AudioIODevice* const currentDevice = setup.manager->getCurrentAudioDevice())
         {
-            if (setup.maxNumOutputChannels > 0
-                 && setup.minNumOutputChannels < setup.manager->getCurrentAudioDevice()->getOutputChannelNames().size())
-            {
-                if (outputChanList == nullptr)
-                {
-                    addAndMakeVisible (outputChanList
-                        = new CustomChannelSelectorListBox (setup, CustomChannelSelectorListBox::audioOutputType,
-                                                      TRANS ("(no audio output channels found)")));
-                    outputChanLabel = new Label (String::empty, TRANS("Active output channels:"));
-                    outputChanLabel->setJustificationType (Justification::centredRight);
-                    outputChanLabel->attachToComponent (outputChanList, true);
-                }
-
-                outputChanList->refresh();
-            }
-            else
-            {
-                outputChanLabel = nullptr;
-                outputChanList = nullptr;
-            }
-
-            if (setup.maxNumInputChannels > 0
-                 && setup.minNumInputChannels < setup.manager->getCurrentAudioDevice()->getInputChannelNames().size())
-            {
-                if (inputChanList == nullptr)
-                {
-                    addAndMakeVisible (inputChanList
-                        = new CustomChannelSelectorListBox (setup, CustomChannelSelectorListBox::audioInputType,
-                                                      TRANS("(no audio input channels found)")));
-                    inputChanLabel = new Label (String::empty, TRANS("Active input channels:"));
-                    inputChanLabel->setJustificationType (Justification::centredRight);
-                    inputChanLabel->attachToComponent (inputChanList, true);
-                }
-
-                inputChanList->refresh();
-            }
-            else
-            {
-                inputChanLabel = nullptr;
-                inputChanList = nullptr;
-            }
-
             updateSampleRateComboBox (currentDevice);
             updateBufferSizeComboBox (currentDevice);
         }
@@ -526,7 +467,7 @@ private:
     const CustomAudioDeviceSetupDetails setup;
 
     ScopedPointer<ComboBox> outputDeviceDropDown, inputDeviceDropDown, sampleRateDropDown, bufferSizeDropDown;
-    ScopedPointer<Label> outputDeviceLabel, inputDeviceLabel, sampleRateLabel, bufferSizeLabel, inputChanLabel, outputChanLabel;
+    ScopedPointer<Label> outputDeviceLabel, inputDeviceLabel, sampleRateLabel, bufferSizeLabel;
     ScopedPointer<TextButton> testButton;
     ScopedPointer<Component> inputLevelMeter;
     ScopedPointer<TextButton> showUIButton, showAdvancedSettingsButton, resetDeviceButton;
@@ -715,17 +656,10 @@ private:
         bufferSizeDropDown->setSelectedId (currentDevice->getCurrentBufferSizeSamples(), dontSendNotification);
         bufferSizeDropDown->addListener (this);
     }
-
-public:
-    //==============================================================================
     
-
-private:
-    ScopedPointer<CustomChannelSelectorListBox> inputChanList, outputChanList;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioDeviceSettingsPanel)
 };
-
 
 //==============================================================================
 CustomAudioDeviceSelectorComponent::CustomAudioDeviceSelectorComponent (AudioDeviceManager& dm,
@@ -951,6 +885,18 @@ void CustomAudioDeviceSelectorComponent::updateAllControls()
     }
 
     resized();
+}
+
+CustomAudioDeviceSetupDetails CustomAudioDeviceSelectorComponent::getDeviceSetupDetails()
+{
+    CustomAudioDeviceSetupDetails details;
+    details.manager = &deviceManager;
+    details.minNumInputChannels = minInputChannels;
+    details.maxNumInputChannels = maxInputChannels;
+    details.minNumOutputChannels = minOutputChannels;
+    details.maxNumOutputChannels = maxOutputChannels;
+    details.useStereoPairs = showChannelsAsStereoPairs;
+    return details;
 }
 
 void CustomAudioDeviceSelectorComponent::buttonClicked (Button* btn)

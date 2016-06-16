@@ -12,7 +12,8 @@
 #define INCLUDE_H_INCLUDED
 
 #include "../JuceLibraryCode/JuceHeader.h"
-#include "CustomChannelSelector.h"
+#include "CustomChannelSelectorController.h"
+#include "CustomChannelSelectorPanel.h"
 #include "CustomAudioSettingsComponent.h"
 
 #include "FeatureExtractorLookAndFeel.h"
@@ -37,6 +38,7 @@
 #include "LiveScrollingAudioDisplay.h"
 #include "PitchEstimationVisualiser.h"
 #include "OSCSettings.h"
+#include "AnalyserTrack.h"
 #include "MainView.h"
 
 

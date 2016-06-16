@@ -53,7 +53,7 @@ public:
 
         jassert (previousBinMagnitudes.size() == binMagnitudes.size());
 
-        for (size_t magnitude = 0; magnitude < numMagnitudes; magnitude++)
+        for (size_t magnitude = 0; magnitude < (size_t) numMagnitudes; magnitude++)
         {
             int fftIndex = magnitude * 2;
 
@@ -86,7 +86,7 @@ public:
         
         double invNumMagnitudes = 1.0 / numMagnitudes;
         float flatness = (float) (pow (magnitudeProduct, invNumMagnitudes) / (invNumMagnitudes * magnitudeSum));
-        for (size_t i = 0; i < numMagnitudes; ++i)
+        for (size_t i = 0; i < (size_t) numMagnitudes; ++i)
         {
             varMagnitudeSum += pow ((binCentreFrequencies[i] / nyquist) - (centroid / nyquist), 2.0) * binMagnitudes[i];
             previousBinMagnitudes[i] = binMagnitudes[i];

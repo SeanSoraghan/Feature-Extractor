@@ -73,10 +73,17 @@ public:
 
         const int availableHeight          = localBounds.getHeight() - 2 * verticalMargin;
         const int settingsHeight           = (int) (FeatureExtractorLookAndFeel::getSettingsHeightRatio() * availableHeight);
-        const int displayHeight            = (int) (FeatureExtractorLookAndFeel::getAudioDisplayHeightRatio() * availableHeight);
+        const int displayHeight            = (int) (FeatureExtractorLookAndFeel::getAudioDisplayHeightRatio() * availableHeight * 2.0f);
         const int featureVisualiserHeight  = (int) (FeatureExtractorLookAndFeel::getFeatureVisualiserComponentHeightRatio() * availableHeight);
 
-        audioScrollingDisplay.setBounds                  (localBounds.removeFromTop (displayHeight));
+        auto trackBounds = localBounds.removeFromTop     (displayHeight);
+        const auto componentWidth = trackBounds.getWidth() / 2;
+        const auto channelSelectorBounds = trackBounds.removeFromLeft (componentWidth);
+
+        if (channelSelector != nullptr)
+            channelSelector->setBounds (channelSelectorBounds);            
+
+        audioScrollingDisplay.setBounds                  (trackBounds.removeFromLeft (componentWidth));
         audioFileTransportController.getView().setBounds (audioScrollingDisplay.getBounds());
         auto gainBounds = localBounds.removeFromTop      (verticalMargin).reduced ((int) (getWidth() * 0.35f), (int) (verticalMargin * 0.2f));
         featureListView.setBounds                        (localBounds.removeFromTop (featureVisualiserHeight));
@@ -94,9 +101,9 @@ public:
         auto displayBounds = audioScrollingDisplay.getBounds();
         auto selectorBounds = displayBounds.removeFromTop  (FeatureExtractorLookAndFeel::getAudioSourceTypeSelectorHeight());
         auto audioSourceSelectorBounds = selectorBounds.removeFromLeft (FeatureExtractorLookAndFeel::getAudioSourceTypeSelectorWidth());
-        auto channelSelectorBounds = selectorBounds.removeFromRight (FeatureExtractorLookAndFeel::getAudioSourceTypeSelectorWidth());
+        auto sourceTypeSelectorBounds = selectorBounds.removeFromRight (FeatureExtractorLookAndFeel::getAudioSourceTypeSelectorWidth());
         audioSourceTypeSelectorController.getSelector().setBounds (audioSourceSelectorBounds);
-        channelTypeSelector.getSelector().setBounds (channelSelectorBounds);
+        channelTypeSelector.getSelector().setBounds (sourceTypeSelectorBounds);
 
         gainLabel.setBounds  (gainBounds.removeFromLeft (gainBounds.getWidth() / 2));
         gainSlider.setBounds (gainBounds);
@@ -117,6 +124,7 @@ public:
     void setAudioSettingsDeviceManager (AudioDeviceManager& deviceManager)
     {
         addAndMakeVisible (audioDeviceSelector = new CustomAudioDeviceSelectorComponent (deviceManager, 2, 2, 2, 2, false, false, true, true));
+        addAndMakeVisible (channelSelector = new ChannelSelectorPanel (audioDeviceSelector->getDeviceSetupDetails()));
         resized();
     }
 
@@ -158,6 +166,7 @@ private:
     AudioVisualiserComponent                    audioScrollingDisplay;
     AudioFileTransportController                audioFileTransportController;
     ScopedPointer<CustomAudioDeviceSelectorComponent> audioDeviceSelector;
+    ScopedPointer<ChannelSelectorPanel>         channelSelector;
     FeatureListModel                            featureListModel;
     FeatureListView                             featureListView;
     OSCSettingsController                       oscSettingsController;

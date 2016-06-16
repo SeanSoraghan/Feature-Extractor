@@ -85,7 +85,8 @@ public:
 
     /** Returns the ListBox that's being used to show the midi inputs, or nullptr if there isn't one. */
     ListBox* getMidiInputSelectorListBox() const noexcept;
-
+    
+    CustomAudioDeviceSetupDetails getDeviceSetupDetails();
     //==============================================================================
     /** @internal */
     void resized() override;
