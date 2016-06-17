@@ -25,11 +25,13 @@ public:
         circleBuffer.clear();
     }
 
-    void audioDeviceAboutToStart (AudioIODevice*) override
-    {}
+    void audioDeviceAboutToStart (AudioIODevice* d) override
+    {
+        jassert(channelToCollect <= d->getActiveInputChannels().getHighestBit());
+    }
 
     void audioDeviceStopped() override
-    {}
+    { }
 
     void audioDeviceIOCallback (const float** inputChannelData, int numInputChannels,
                                 float** outputChannelData, int numOutputChannels,
@@ -43,8 +45,6 @@ public:
             jassert (numInputChannels >= channelToCollect);
         if (!collectInput)
             jassert (numOutputChannels >= channelToCollect);
-        if (channelToCollect > 0)
-            jassert (numInputChannels >= channelToCollect);
 
         analysisBufferUpdating.set (1);
 

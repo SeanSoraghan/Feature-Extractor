@@ -95,14 +95,11 @@ public:
     void changeListenerCallback (ChangeBroadcaster* broadcaster) override
     {
         juce::AudioDeviceManager* adm = dynamic_cast<juce::AudioDeviceManager*>(broadcaster);
+
         if (adm != nullptr)
-        {
             updateAnalysisTracksFromDeviceManager (adm);
-        }
         else
-        {
             jassertfalse;
-        }
     }
 
     //=======================================================================
@@ -110,18 +107,27 @@ public:
     void setAudioSettingsDeviceManager (AudioDeviceManager& deviceManager)
     {
         const int minInputChannels              = 1;
-        const int maxInputChannels              = 4;
-        const int minOutputchannels             = 1;
-        const int maxOutputchannels             = 4;
+        const int maxInputChannels              = 8;
+        const int minOutputchannels             = 0;
+        const int maxOutputchannels             = 0;
         const bool showMidiIn                   = false;
         const bool showMidiOut                  = false;
         const bool presentChannelsAsStereoPairs = false;
         const bool hideAdvancedSettings         = true;
+        
+        std::function<void()> clearAllTracksCallback = [this]()
+        {
+            clearAllTracks();
+        };
+
         addAndMakeVisible (audioDeviceSelector = new CustomAudioDeviceSelectorComponent (deviceManager, 
                                                                                          minInputChannels, maxInputChannels, 
                                                                                          minOutputchannels, maxOutputchannels, showMidiIn, showMidiOut, 
-                                                                                         presentChannelsAsStereoPairs, hideAdvancedSettings));
+                                                                                         presentChannelsAsStereoPairs, hideAdvancedSettings, clearAllTracksCallback));
         addAndMakeVisible (channelSelector = new ChannelSelectorPanel (audioDeviceSelector->getDeviceSetupDetails()));
+        
+        channelSelector->setChannelsConfigAboutToChangeCallback (clearAllTracksCallback);
+
         resized();
     }
 
@@ -132,21 +138,38 @@ public:
         clearAllTracks();
 
         const auto currentDevice = dm->getCurrentAudioDevice();
-        const auto activeInputs  = currentDevice->getActiveInputChannels();
-        int channel = activeInputs.findNextSetBit (0);
-        while (channel >= 0)
+        if (currentDevice != nullptr)
         {
-            addAnalyserTrack (channel);
-            DBG("Set Channel: "<<channel);
-            channel = activeInputs.findNextSetBit (channel + 1);            
+            const auto channelNames = currentDevice->getInputChannelNames();
+            const auto numInputs = channelNames.size();
+            const auto activeInputs  = currentDevice->getActiveInputChannels();
+            const auto numActiveChannels = activeInputs.countNumberOfSetBits();
+
+            auto activeInputBitNumber = activeInputs.findNextSetBit(0);
+            auto inputChannel = 0;
+            for (auto input = 0; input < numInputs; ++input)
+            {
+                String channelName = channelNames[input];
+                if (activeInputBitNumber == input)
+                {
+                    addAnalyserTrack (inputChannel, channelName);
+                    inputChannel ++;
+                    activeInputBitNumber = activeInputs.findNextSetBit (activeInputBitNumber + 1);
+                }
+                else
+                {
+                    view.addDisabledAnalyserTrack (channelName);
+                }
+            }
         }
+        
         resized();
     }
 
-    void addAnalyserTrack (int channelToAnalyse)
+    void addAnalyserTrack (int channelToAnalyse, String channelName)
     {
         analyserControllers.add (new AnalyserTrackController (deviceManager, channelToAnalyse));
-        view.addAnalyserTrack (*analyserControllers.getLast(), audioDeviceSelector->getDeviceSetupDetails());
+        view.addAnalyserTrack (*analyserControllers.getLast(), channelName, audioDeviceSelector->getDeviceSetupDetails());
     }
 
     void clearAllTracks()

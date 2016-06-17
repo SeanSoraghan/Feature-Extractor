@@ -15,8 +15,9 @@ class AnalyserTrack : public Component,
                       public Slider::Listener
 {
 public:
-    AnalyserTrack()
-    :   gainLabel                         ("gainLabel", "Gain:"),
+    AnalyserTrack (String channelName)
+    :   channelNameLabel                  ("AnalyserTrack", channelName),
+        gainLabel                         ("gainLabel", "Gain:"),
         audioScrollingDisplay             (1),
         featureListView                   (featureListModel),
         audioSourceTypeSelectorController (getAudioSourceTypeString)
@@ -29,10 +30,7 @@ public:
         addAndMakeVisible (audioScrollingDisplay);
 
         for (int i = 0; i < (int) AudioFeatures::eAudioFeature::numFeatures; i++)
-            if (i <= AudioFeatures::eAudioFeature::enCentroid)
                 featureListModel.addFeature ((AudioFeatures::eAudioFeature) i);
-        
-        featureListModel.addFeature (AudioFeatures::enFlatness);
 
         featureListView.recreateVisualisersFromModel();
         
@@ -55,7 +53,9 @@ public:
         addAndMakeVisible (gainSlider);
         addAndMakeVisible (gainLabel);
 
-        addAndMakeVisible (pitchEstimationVisualiser);
+        addAndMakeVisible (channelNameLabel);
+
+        //addAndMakeVisible (pitchEstimationVisualiser);
     }
 
     ~AnalyserTrack()
@@ -77,12 +77,17 @@ public:
     void resized() override
     {
         auto& localBounds = getLocalBounds();
-        const auto availableWidth = localBounds.getWidth();
-        const auto audioDisplayWidth    = (int)(availableWidth * 0.75f);
-        const auto oscWidth             = (int)(availableWidth * 0.25f);
+        const auto& availableWidth = localBounds.getWidth();
+        const auto& audioDisplayWidth    = (int)(availableWidth * 0.75f);
+        const auto& oscWidth             = (int)(availableWidth * 0.25f);
 
-        audioScrollingDisplay.setBounds (localBounds.removeFromLeft (audioDisplayWidth));
+        auto& audioAndFeaturesBounds =  localBounds.removeFromLeft (audioDisplayWidth);
+        const int displayHeight = audioAndFeaturesBounds.getHeight() / 2; 
+        audioScrollingDisplay.setBounds           (audioAndFeaturesBounds.removeFromTop (displayHeight));
+        featureListView.setBounds                 (audioAndFeaturesBounds.removeFromTop (displayHeight));
         oscSettingsController.getView().setBounds (localBounds.removeFromLeft (audioDisplayWidth));
+
+        channelNameLabel.setBounds (getLocalBounds().removeFromTop (20).removeFromLeft (100));
     }
 
     void sliderValueChanged (Slider* s) override
@@ -93,7 +98,7 @@ public:
     }
 
     AudioVisualiserComponent&  getAudioDisplayComponent()     { return audioScrollingDisplay; }
-    PitchEstimationVisualiser& getPitchEstimationVisualiser() { return pitchEstimationVisualiser; }
+    //PitchEstimationVisualiser& getPitchEstimationVisualiser() { return pitchEstimationVisualiser; }
 
     void setAudioSourceTypeChangedCallback (std::function<void (eAudioSourceType type)> f) { audioSourceTypeSelectorController.setAudioSourceTypeChangedCallback (f); }
     void setAddressChangedCallback (std::function<bool (String)> f)                        { oscSettingsController.setAddressChangedCallback (f); }
@@ -126,16 +131,17 @@ public:
     void setGainChangedCallback        (std::function<void (float)> f)                                         { gainChangedCallback = f; }
 
 private:
-    std::function<void (float)>                 gainChangedCallback;
-    Label                                       gainLabel;
-    Slider                                      gainSlider;
-    AudioVisualiserComponent                    audioScrollingDisplay;
-    AudioFileTransportController                audioFileTransportController;
-    FeatureListModel                            featureListModel;
-    FeatureListView                             featureListView;
-    OSCSettingsController                       oscSettingsController;
-    PitchEstimationVisualiser                   pitchEstimationVisualiser;
-    AudioSourceSelectorController<>             audioSourceTypeSelectorController;
+    std::function<void (float)>     gainChangedCallback;
+    Label                           channelNameLabel;
+    Label                           gainLabel;
+    Slider                          gainSlider;
+    AudioVisualiserComponent        audioScrollingDisplay;
+    AudioFileTransportController    audioFileTransportController;
+    FeatureListModel                featureListModel;
+    FeatureListView                 featureListView;
+    OSCSettingsController           oscSettingsController;
+    //PitchEstimationVisualiser       pitchEstimationVisualiser;
+    AudioSourceSelectorController<> audioSourceTypeSelectorController;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AnalyserTrack);
 };

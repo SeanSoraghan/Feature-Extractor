@@ -258,7 +258,8 @@ struct AudioAnalyser
         std::vector<F0Candidate> frequencyHistogram;
         frequencyHistogram.clear();
 
-        size_t numBins = (size_t) fftResults.getNumSamples();
+        size_t numBins = (size_t) fftResults.getNumSamples();// /2 /2
+
         //calculate mean bin magnitude and maximum bin magnitude
         double meanMagnitude = 0.0;
         double magnitudeSum = 0.0;

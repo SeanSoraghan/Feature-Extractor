@@ -27,6 +27,13 @@ public:
         setup.manager->removeChangeListener (this);
     }
 
+    void setChannelsConfigAboutToChangeCallback (std::function<void()> f) 
+    { 
+        if (inputChanList != nullptr)
+            inputChanList->setChannelsConfigAboutToChangeCallback (f); 
+        if (outputChanList != nullptr)
+            outputChanList->setChannelsConfigAboutToChangeCallback (f);
+    }
 
 private:
     void resized()
@@ -100,7 +107,8 @@ private:
 
     void changeListenerCallback (ChangeBroadcaster*) override
     {
-        updateControls();
+        if (setup.manager != nullptr && setup.manager->getCurrentAudioDevice() != nullptr)
+            updateControls();
     }
 
     const CustomAudioDeviceSetupDetails         setup;

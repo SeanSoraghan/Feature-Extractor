@@ -205,8 +205,10 @@ class AudioDeviceSettingsPanel : public Component,
 {
 public:
     AudioDeviceSettingsPanel (AudioIODeviceType& t, CustomAudioDeviceSetupDetails& setupDetails,
-                              const bool hideAdvancedOptionsWithButton)
-        : type (t), setup (setupDetails)
+                              const bool hideAdvancedOptionsWithButton, std::function<void()> audioDeviceAboutToChangeCB)
+        :   type (t), 
+            setup (setupDetails), 
+            audioDeviceAboutToChangeCallback (audioDeviceAboutToChangeCB)
     {
         if (hideAdvancedOptionsWithButton)
         {
@@ -329,6 +331,8 @@ public:
         if (comboBoxThatHasChanged == outputDeviceDropDown
               || comboBoxThatHasChanged == inputDeviceDropDown)
         {
+            audioDeviceAboutToChange();
+
             if (outputDeviceDropDown != nullptr)
                 config.outputDeviceName = outputDeviceDropDown->getSelectedId() < 0 ? String::empty
                                                                                     : outputDeviceDropDown->getText();
@@ -374,6 +378,12 @@ public:
             AlertWindow::showMessageBoxAsync (AlertWindow::WarningIcon,
                                               TRANS("Error when trying to open audio device!"),
                                               error);
+    }
+
+    void audioDeviceAboutToChange()
+    {
+        if (audioDeviceAboutToChangeCallback != nullptr)
+            audioDeviceAboutToChangeCallback();
     }
 
     bool showDeviceControlPanel()
@@ -463,6 +473,7 @@ public:
     }
 
 private:
+    std::function<void()> audioDeviceAboutToChangeCallback;
     AudioIODeviceType& type;
     const CustomAudioDeviceSetupDetails setup;
 
@@ -663,22 +674,24 @@ private:
 
 //==============================================================================
 CustomAudioDeviceSelectorComponent::CustomAudioDeviceSelectorComponent (AudioDeviceManager& dm,
-                                                            const int minInputChannels_,
-                                                            const int maxInputChannels_,
-                                                            const int minOutputChannels_,
-                                                            const int maxOutputChannels_,
-                                                            const bool showMidiInputOptions,
-                                                            const bool showMidiOutputSelector,
-                                                            const bool showChannelsAsStereoPairs_,
-                                                            const bool hideAdvancedOptionsWithButton_)
-    : deviceManager (dm),
-      itemHeight (24),
-      minOutputChannels (minOutputChannels_),
-      maxOutputChannels (maxOutputChannels_),
-      minInputChannels (minInputChannels_),
-      maxInputChannels (maxInputChannels_),
-      showChannelsAsStereoPairs (showChannelsAsStereoPairs_),
-      hideAdvancedOptionsWithButton (hideAdvancedOptionsWithButton_)
+                                                                        const int minInputChannels_,
+                                                                        const int maxInputChannels_,
+                                                                        const int minOutputChannels_,
+                                                                        const int maxOutputChannels_,
+                                                                        const bool showMidiInputOptions,
+                                                                        const bool showMidiOutputSelector,
+                                                                        const bool showChannelsAsStereoPairs_,
+                                                                        const bool hideAdvancedOptionsWithButton_,
+                                                                        std::function<void()> audioDeviceAboutToChangeCB)
+:   deviceManager                    (dm),
+    audioDeviceAboutToChangeCallback (audioDeviceAboutToChangeCB),
+    itemHeight                       (24),
+    minOutputChannels                (minOutputChannels_),
+    maxOutputChannels                (maxOutputChannels_),
+    minInputChannels                 (minInputChannels_),
+    maxInputChannels                 (maxInputChannels_),
+    showChannelsAsStereoPairs        (showChannelsAsStereoPairs_),
+    hideAdvancedOptionsWithButton    (hideAdvancedOptionsWithButton_)
 {
     jassert (minOutputChannels >= 0 && minOutputChannels <= maxOutputChannels);
     jassert (minInputChannels >= 0 && minInputChannels <= maxInputChannels);
@@ -804,6 +817,9 @@ void CustomAudioDeviceSelectorComponent::comboBoxChanged (ComboBox* comboBoxThat
 {
     if (comboBoxThatHasChanged == deviceTypeDropDown)
     {
+        if (audioDeviceAboutToChangeCallback != nullptr)
+            audioDeviceAboutToChangeCallback();
+
         if (AudioIODeviceType* const type = deviceManager.getAvailableDeviceTypes() [deviceTypeDropDown->getSelectedId() - 1])
         {
             audioDeviceSettingsComp = nullptr;
@@ -850,7 +866,7 @@ void CustomAudioDeviceSelectorComponent::updateAllControls()
             details.maxNumOutputChannels = maxOutputChannels;
             details.useStereoPairs = showChannelsAsStereoPairs;
 
-            AudioDeviceSettingsPanel* sp = new AudioDeviceSettingsPanel (*type, details, hideAdvancedOptionsWithButton);
+            AudioDeviceSettingsPanel* sp = new AudioDeviceSettingsPanel (*type, details, hideAdvancedOptionsWithButton, audioDeviceAboutToChangeCallback);
             audioDeviceSettingsComp = sp;
             addAndMakeVisible (sp);
             sp->updateAllControls();

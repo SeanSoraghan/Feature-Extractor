@@ -90,6 +90,7 @@ public:
         float flatness = realTimeAudioFeatures.getAudioFeature (AudioFeatures::eAudioFeature::enFlatness);
         float spread =   realTimeAudioFeatures.getAudioFeature (AudioFeatures::eAudioFeature::enSpread);
         float slope =    realTimeAudioFeatures.getAudioFeature (AudioFeatures::eAudioFeature::enSlope);
+        float flux =     realTimeAudioFeatures.getAudioFeature (AudioFeatures::eAudioFeature::enFlux);
         float onset =    realTimeAudioFeatures.getAudioFeature (AudioFeatures::eAudioFeature::enOnset);  
         if (updateHarmonicFeatures)
         {
@@ -98,7 +99,7 @@ public:
             float inharm =  realTimeAudioFeatures.getAudioFeature (AudioFeatures::eAudioFeature::enInharmonicity);  
             //DBG("F0 estimation: "<<f0<<" |her: "<<her<<" |inharm: "<<inharm);
             //sender.send (bundleAddress, onset, rmsLevel, centroid, flatness, spread, slope, f0, her, inharm);
-            sender.send (bundleAddress, onset, rmsLevel, f0, centroid, flatness);
+            sender.send (bundleAddress, onset, rmsLevel, f0, centroid, slope, spread, flatness, flux, her, inharm);
         }
         else
         {

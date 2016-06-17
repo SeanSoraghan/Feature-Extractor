@@ -26,6 +26,7 @@
 #include "RealTimeAudioAnalysis.h"
 #include "PitchAnalyser.h"
 #include "SpectralCharacteristics.h"
+#include "HarmonicCharacteristics.h"
 #include "AudioFeatures.h"
 #include "AudioAnalysis.h"
 #include "RealTimeAnalyser.h"

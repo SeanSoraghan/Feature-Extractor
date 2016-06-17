@@ -62,14 +62,15 @@ public:
                                         are shown, with an "advanced" button that shows the rest of them
     */
     CustomAudioDeviceSelectorComponent (AudioDeviceManager& deviceManager,
-                                  int minAudioInputChannels,
-                                  int maxAudioInputChannels,
-                                  int minAudioOutputChannels,
-                                  int maxAudioOutputChannels,
-                                  bool showMidiInputOptions,
-                                  bool showMidiOutputSelector,
-                                  bool showChannelsAsStereoPairs,
-                                  bool hideAdvancedOptionsWithButton);
+                                        int minAudioInputChannels,
+                                        int maxAudioInputChannels,
+                                        int minAudioOutputChannels,
+                                        int maxAudioOutputChannels,
+                                        bool showMidiInputOptions,
+                                        bool showMidiOutputSelector,
+                                        bool showChannelsAsStereoPairs,
+                                        bool hideAdvancedOptionsWithButton,
+                                        std::function<void()> audioDeviceAboutToChangeCB);
 
     /** Destructor */
     ~CustomAudioDeviceSelectorComponent();
@@ -98,6 +99,7 @@ private:
     void buttonClicked (Button*) override;
 
     //==============================================================================
+    std::function<void()> audioDeviceAboutToChangeCallback;
     ScopedPointer<ComboBox> deviceTypeDropDown;
     ScopedPointer<Label> deviceTypeDropDownLabel;
     ScopedPointer<Component> audioDeviceSettingsComp;

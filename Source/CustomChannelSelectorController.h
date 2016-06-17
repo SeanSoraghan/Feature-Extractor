@@ -122,6 +122,7 @@ public:
 
     void listBoxItemClicked (int row, const MouseEvent& e) override
     {
+        channelConfigAboutToChange();
         selectRow (row);
 
         if (e.x < getTickX())
@@ -130,11 +131,13 @@ public:
 
     void listBoxItemDoubleClicked (int row, const MouseEvent&) override
     {
+        channelConfigAboutToChange();
         flipEnablement (row);
     }
 
     void returnKeyPressed (int row) override
     {
+        channelConfigAboutToChange();
         flipEnablement (row);
     }
 
@@ -159,8 +162,10 @@ public:
                     + getOutlineThickness() * 2;
     }
 
+    void setChannelsConfigAboutToChangeCallback (std::function<void()> f) { channelsConfigurationAboutToChangeCallback = f; }
 private:
     //==============================================================================
+    std::function<void()> channelsConfigurationAboutToChangeCallback;
     const CustomAudioDeviceSetupDetails setup;
     const CustomBoxType type;
     const String noItemsMessage;
@@ -267,6 +272,11 @@ private:
         return getRowHeight() + 5;
     }
 
+    void channelConfigAboutToChange()
+    {
+        if (channelsConfigurationAboutToChangeCallback != nullptr)
+            channelsConfigurationAboutToChangeCallback();
+    }
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CustomChannelSelectorListBox)
 };
 

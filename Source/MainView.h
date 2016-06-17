@@ -35,11 +35,17 @@ public:
             track->setBounds (localBounds.removeFromTop (trackHeight));
     }
 
-    void addAnalyserTrack (AnalyserTrackController& controller, CustomAudioDeviceSetupDetails& deviceSetupDetails)
+    void addAnalyserTrack (AnalyserTrackController& controller, String channelName, CustomAudioDeviceSetupDetails& deviceSetupDetails)
     {
-        addAndMakeVisible (analysers.add (new AnalyserTrack()));
+        addAndMakeVisible (analysers.add (new AnalyserTrack (channelName)));
         controller.linkGUIDisplayToTrack (analysers.getLast(), deviceSetupDetails);
         resized();
+    }
+
+    void addDisabledAnalyserTrack (String channelName)
+    {
+        analysers.add (new AnalyserTrack (channelName));
+        analysers.getLast()->setEnabled (false);
     }
 
     void clearAnalyserTracks()

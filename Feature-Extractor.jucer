@@ -14,6 +14,8 @@
               file="Source/OSCFeatureAnalysisOutput.h"/>
       </GROUP>
       <GROUP id="{29DF75BB-9F0D-3A11-B7EE-0A224FB3FCF4}" name="AudioAnalysis">
+        <FILE id="SqIFOz" name="HarmonicCharacteristics.h" compile="0" resource="0"
+              file="Source/HarmonicCharacteristics.h"/>
         <FILE id="QXwe64" name="SpectralCharacteristics.h" compile="0" resource="0"
               file="Source/SpectralCharacteristics.h"/>
         <FILE id="gLQM9m" name="PitchAnalyser.h" compile="0" resource="0" file="Source/PitchAnalyser.h"/>

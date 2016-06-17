@@ -46,6 +46,7 @@ public:
         double varMagnitudeSum      = 0.0;
         double magnitudeSum         = 0.0;
         double magnitudeProduct     = 1.0;
+        double flatnessMagnitudeSum = 0.0;
         double flux                 = 0.0;
 
         std::vector<double> binCentreFrequencies ((size_t)numMagnitudes);
@@ -53,6 +54,7 @@ public:
 
         jassert (previousBinMagnitudes.size() == binMagnitudes.size());
 
+        double numMagnitudesUsedInFlatnessCalculation = 0.0;
         for (size_t magnitude = 0; magnitude < (size_t) numMagnitudes; magnitude++)
         {
             int fftIndex = magnitude * 2;
@@ -71,21 +73,29 @@ public:
             binMagnitudes[magnitude] = binMagnitude;
             
             magnitudeSum += binMagnitude;
-            magnitudeProduct *= binMagnitude;
+            double eps = 0.001;
+            if (binMagnitude > eps)
+            {
+                flatnessMagnitudeSum += binMagnitude;
+                magnitudeProduct     *= binMagnitude;
+                numMagnitudesUsedInFlatnessCalculation ++;
+            }
+
             weightedMagnitudeSum += binCentreFrequency * binMagnitude;
         }
         
         float maxFlux = (numMagnitudes * (numMagnitudes + 1)) / 2.0f;
         flux /= maxFlux;
 
-        double eps = 0.001;
+        double eps = 0.05;
         if (!(magnitudeSum > eps))
             return {0.0f, 0.0f, 0.0f, 0.0f};
         float centroid = (float) (weightedMagnitudeSum / magnitudeSum);
         //        float scaledC = (float)(log2 (1.0 + 1023.0 * (centroid)) / 10.0);
         
-        double invNumMagnitudes = 1.0 / numMagnitudes;
-        float flatness = (float) (pow (magnitudeProduct, invNumMagnitudes) / (invNumMagnitudes * magnitudeSum));
+        double invNumMagnitudes = 1.0 / (numMagnitudesUsedInFlatnessCalculation > 0.0 ? numMagnitudesUsedInFlatnessCalculation : 1.0);
+        float flatness = flatnessMagnitudeSum > eps ? (float) (pow (magnitudeProduct, invNumMagnitudes) / (invNumMagnitudes * flatnessMagnitudeSum)) : 0.0f;
+        float logFlatness = log10 (flatness * 9.0 + 1.0);
         for (size_t i = 0; i < (size_t) numMagnitudes; ++i)
         {
             varMagnitudeSum += pow ((binCentreFrequencies[i] / nyquist) - (centroid / nyquist), 2.0) * binMagnitudes[i];
@@ -93,48 +103,60 @@ public:
         }
         float maxSpread = (float) ((centroid / nyquist) * (1.0 - (centroid / nyquist)));
         float spread = (float) ((varMagnitudeSum / magnitudeSum) / maxSpread);
-        return {centroid / (float)nyquist, spread, flatness, (float) flux};
+        return {centroid / (float)nyquist, spread, logFlatness, (float) flux};
     }
 
     float calculateNormalisedSpectralSlope (AudioSampleBuffer& fftResults, int channel)
     {
         //calc means
-        double numBins = (double) fftResults.getNumSamples();
+        const int numFFTElements = (int) fftResults.getNumSamples() / 2;
+        const int numMagnitudes  = numFFTElements / 2;
         double meanBin = 0.5;
         double meanEnergy = 0.0;
         double prodSum = 0.0;
-        double fftMagnitude = fftResults.getMagnitude (channel, 0, (int)numBins);
-        
+        double maxFFTMagnitude = fftResults.getMagnitude (channel, 0, numMagnitudes);
+        std::vector<double> binMagnitudes ((size_t)numMagnitudes);
+
+        for (int i = 0; i < numMagnitudes; i++)
+        {
+            double binValue = fftResults.getSample (channel, i * 2);
+            double binMagnitude = binValue * binValue;
+            binMagnitudes[i] = binMagnitude;
+            if (binMagnitude > maxFFTMagnitude)
+                maxFFTMagnitude = binMagnitude;
+        }
+
         double eps = 0.0001;
-        if (! (fftMagnitude > eps))
+        if (! (maxFFTMagnitude > eps))
             return 0.0f;
         
-        for (int i = 0; i < (int) numBins; i++)
+        for (int i = 0; i < (int) numMagnitudes; i++)
         {
-            double normedEnergy = fftResults.getSample (channel, i) / fftMagnitude;
+            double binMagnitude = binMagnitudes[i];
+            double normedEnergy = binMagnitude / maxFFTMagnitude;
             jassert (normedEnergy >= 0.0 && normedEnergy <= 1.0);
             meanEnergy += normedEnergy;
             prodSum += (double)i * normedEnergy;
         }
-        meanEnergy /= numBins;
+        meanEnergy /= (double) numMagnitudes;
         
         //calc std devs
         double binVar = 0.0;
         double energyVar = 0.0;
-        for (double i = 0.0; i < numBins; i++)
+        for (double i = 0.0; i < numMagnitudes; i++)
         {
-            double normedI = i / numBins;
+            double normedI = i / (double) numMagnitudes;
             binVar += (normedI - meanBin) * (normedI - meanBin);
-            double normedEnergy = fftResults.getSample (channel, (int)i) / fftMagnitude;
+            double normedEnergy = binMagnitudes[(int)i] / maxFFTMagnitude;
             energyVar += (normedEnergy - meanEnergy) * (normedEnergy - meanEnergy);
         }
-        binVar /= numBins;
-        energyVar /= numBins;
+        binVar /= (double) numMagnitudes;
+        energyVar /= (double) numMagnitudes;
         double binStd = sqrt (binVar);
         double energyStd = sqrt (energyVar);
         
         //calculate sample correlation coefficient
-        double rMagBin = (prodSum - (numBins * meanEnergy * meanBin)) / (numBins - 1.0f) * energyStd * binStd;
+        double rMagBin = (prodSum - (numMagnitudes * meanEnergy * meanBin)) / (numMagnitudes - 1.0f) * energyStd * binStd;
         
         //calculate gradient of best fit
         double grad = rMagBin * (binStd / energyStd);

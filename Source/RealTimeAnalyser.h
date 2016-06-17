@@ -36,7 +36,7 @@ public:
             case enOnset:
                 return String ("Onset");
             case enRMS:
-                return String ("Amplitude");
+                return String ("Amp.");
             case enF0:
                 return String ("Pitch");
             case enCentroid:
@@ -50,9 +50,9 @@ public:
             case enSlope:
                 return String ("Slope");
             case enHarmonicEnergyRatio:
-                return String ("Harmonic Energy Ratio");
+                return String ("H.E.R");
             case enInharmonicity:
-                return String ("Inharmonicity");
+                return String ("Inharm.");
         }
     }
 
@@ -124,7 +124,7 @@ public:
             features.updateFeature (AudioFeatures::eAudioFeature::enFlatness, spectralFeatures.flatness);
             features.updateFeature (AudioFeatures::eAudioFeature::enSpread,   spectralFeatures.spread);
             features.updateFeature (AudioFeatures::eAudioFeature::enFlux,     spectralFeatures.flux);
-            //features.updateFeature (AudioFeatures::eAudioFeature::enSlope,    spectralAnalyser.calculateNormalisedSpectralSlope (frequencyBuffer, 0));
+            features.updateFeature (AudioFeatures::eAudioFeature::enSlope,    spectralAnalyser.calculateNormalisedSpectralSlope (frequencyBuffer, 0));
 
             features.updateFeature (AudioFeatures::eAudioFeature::enOnset, detectOnset());
             
@@ -132,7 +132,14 @@ public:
                 onsetDetectedCallback();
             
             /* Estimate Pitch */
-            features.updateFeature (AudioFeatures::eAudioFeature::enF0, (float) pitchEstimator.estimatePitch (frequencyBuffer));
+            double f0Estimate = pitchEstimator.estimatePitch (frequencyBuffer);
+            const double f0NormalisationFactor = 5000.0;
+            features.updateFeature (AudioFeatures::eAudioFeature::enF0, (float) (f0Estimate / f0NormalisationFactor));
+
+            /* Calculate harmonic features based on pitch estimation */
+            HarmonicCharacteristics harmonicFeatures = harmonicAnalyser.calculateHarmonicCharacteristics (frequencyBuffer, f0Estimate, fft.getNyquist(), 0);
+            features.updateFeature (AudioFeatures::eAudioFeature::enHarmonicEnergyRatio, harmonicFeatures.harmonicEnergyRatio);
+            features.updateFeature (AudioFeatures::eAudioFeature::enInharmonicity,       harmonicFeatures.inharmonicity);
 
             /* Wait for notification that new audio data has come in from audio thread */
             wait (-1);
@@ -177,6 +184,7 @@ private:
     RealTimeAudioDataOverlapper     overlapper;
     FFTAnalyser                     fft;
     SpectralCharacteristicsAnalyser spectralAnalyser;
+    HarmonicCharacteristicsAnalyser harmonicAnalyser;
     PitchAnalyser                   pitchEstimator;
     OnsetDetector                   onsetDetector;
     AudioFeatures                   features;
