@@ -23,13 +23,14 @@ public:
     MainContentComponent() 
     
     {
+        setLookAndFeel (lookAndFeel);
         setSize (800, 600);
         // specify the number of input and output channels that we want to open
         setAudioChannels  (2, 2);
         
         deviceManager.addChangeListener (this);
         
-        view.setAudioSettingsDeviceManager (deviceManager);
+        setAudioSettingsDeviceManager (deviceManager);
         //deviceManager.addAudioCallback (&view.getAudioDisplayComponent());
         addAndMakeVisible (view);
 
@@ -77,13 +78,18 @@ public:
 
     void resized() override
     {
-        view.setBounds (getLocalBounds());
-    }
+        auto& localBounds = getLocalBounds();
+        const auto testH = localBounds.getHeight() / 2;
+        auto& selectorBounds = localBounds.removeFromTop (testH);
+        const auto channelSelectorWidth = selectorBounds.getWidth() / 2;
+        const auto& channelSelectorBounds = selectorBounds.removeFromLeft (channelSelectorWidth);
 
-    void addAnalyserTrack (int channelToAnalyse)
-    {
-        analyserControllers.add (new AnalyserTrackController (deviceManager, channelToAnalyse));
-        view.addAnalyserTrack (*analyserControllers.getLast());
+        if (channelSelector != nullptr)
+            channelSelector->setBounds (channelSelectorBounds);
+        if (audioDeviceSelector != nullptr)
+            audioDeviceSelector->setBounds (selectorBounds);
+
+        view.setBounds (localBounds);
     }
 
     void changeListenerCallback (ChangeBroadcaster* broadcaster) override
@@ -98,6 +104,28 @@ public:
             jassertfalse;
         }
     }
+
+    //=======================================================================
+
+    void setAudioSettingsDeviceManager (AudioDeviceManager& deviceManager)
+    {
+        const int minInputChannels              = 1;
+        const int maxInputChannels              = 4;
+        const int minOutputchannels             = 1;
+        const int maxOutputchannels             = 4;
+        const bool showMidiIn                   = false;
+        const bool showMidiOut                  = false;
+        const bool presentChannelsAsStereoPairs = false;
+        const bool hideAdvancedSettings         = true;
+        addAndMakeVisible (audioDeviceSelector = new CustomAudioDeviceSelectorComponent (deviceManager, 
+                                                                                         minInputChannels, maxInputChannels, 
+                                                                                         minOutputchannels, maxOutputchannels, showMidiIn, showMidiOut, 
+                                                                                         presentChannelsAsStereoPairs, hideAdvancedSettings));
+        addAndMakeVisible (channelSelector = new ChannelSelectorPanel (audioDeviceSelector->getDeviceSetupDetails()));
+        resized();
+    }
+
+    //=======================================================================
 
     void updateAnalysisTracksFromDeviceManager (AudioDeviceManager* dm)
     {
@@ -115,6 +143,12 @@ public:
         resized();
     }
 
+    void addAnalyserTrack (int channelToAnalyse)
+    {
+        analyserControllers.add (new AnalyserTrackController (deviceManager, channelToAnalyse));
+        view.addAnalyserTrack (*analyserControllers.getLast(), audioDeviceSelector->getDeviceSetupDetails());
+    }
+
     void clearAllTracks()
     {
         for (const auto track : analyserControllers)
@@ -123,8 +157,12 @@ public:
         analyserControllers.clear();
         view.clearAnalyserTracks();
     }
+    //=======================================================================
+
 private:
     SharedResourcePointer<FeatureExtractorLookAndFeel> lookAndFeel;
+    ScopedPointer<ChannelSelectorPanel>                channelSelector;
+    ScopedPointer<CustomAudioDeviceSelectorComponent>  audioDeviceSelector;
     OwnedArray<AnalyserTrackController>                analyserControllers;
     MainView                                           view;
     
