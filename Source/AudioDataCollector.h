@@ -35,46 +35,38 @@ public:
                                 float** outputChannelData, int numOutputChannels,
                                 int numberOfSamples) override
     {
-        //const float** channelData = collectInput ? inputChannelData : outputChannelData;
-        //AudioSampleBuffer buffer (collectInput ? numInputChannels : numOutputChannels, numberOfSamples);
-        //buffer.clear();
-        //buffer.copyFrom (0, 0, channelData[0], numberOfSamples);
-        //updateSpectralBufferVisualiser (buffer);
-        
+        ignoreUnused (numInputChannels);
+        ignoreUnused (numOutputChannels);
+        const float** channelData = collectInput ? inputChannelData : outputChannelData;
 
-        //if (analysisBufferNeedsUpdating.get() == 1)
-        //{
-            ignoreUnused (numInputChannels);
-            ignoreUnused (numOutputChannels);
-            const float** channelData = collectInput ? inputChannelData : outputChannelData;
+        if (collectInput)
+            jassert (numInputChannels >= channelToCollect);
+        if (!collectInput)
+            jassert (numOutputChannels >= channelToCollect);
+        if (channelToCollect > 0)
+            jassert (numInputChannels >= channelToCollect);
 
-            if (collectInput)
-                jassert (numInputChannels >= channelToCollect);
-            if (!collectInput)
-                jassert (numOutputChannels >= channelToCollect);
+        analysisBufferUpdating.set (1);
 
-            analysisBufferUpdating.set (1);
-
-            if (writeIndex + numberOfSamples <= circleBuffer.getNumSamples())
+        if (writeIndex + numberOfSamples <= circleBuffer.getNumSamples())
+        {
+            circleBuffer.copyFrom (0, writeIndex, channelData[channelToCollect], numberOfSamples);
+        }
+        else
+        {
+            for (int index = 0; index < numberOfSamples; index++)
             {
-                circleBuffer.copyFrom (0, writeIndex, channelData[channelToCollect], numberOfSamples);
+                const int modIndex = (index + writeIndex) % circleBuffer.getNumSamples();
+                circleBuffer.setSample (0, modIndex, channelData[channelToCollect][index]);
             }
-            else
-            {
-                for (int index = 0; index < numberOfSamples; index++)
-                {
-                    const int modIndex = (index + writeIndex) % circleBuffer.getNumSamples();
-                    circleBuffer.setSample (0, modIndex, channelData[channelToCollect][index]);
-                }
-            }
+        }
         
-            writeIndex = (writeIndex + numberOfSamples) % circleBuffer.getNumSamples();
+        writeIndex = (writeIndex + numberOfSamples) % circleBuffer.getNumSamples();
 
-            analysisBufferUpdating.set (0);
+        analysisBufferUpdating.set (0);
 
-            if (notifyAnalysisThread != nullptr)
-                notifyAnalysisThread();
-        //}
+        if (notifyAnalysisThread != nullptr)
+            notifyAnalysisThread();
     }
 
     AudioSampleBuffer getAnalysisBuffer (int numSamplesRequired)

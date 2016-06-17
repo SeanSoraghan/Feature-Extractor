@@ -19,8 +19,7 @@ public:
     :   gainLabel                         ("gainLabel", "Gain:"),
         audioScrollingDisplay             (1),
         featureListView                   (featureListModel),
-        audioSourceTypeSelectorController (getAudioSourceTypeString),
-        channelTypeSelector               (getChannelTypeString)
+        audioSourceTypeSelectorController (getAudioSourceTypeString)
     {
         setLookAndFeel (SharedResourcePointer<FeatureExtractorLookAndFeel>());  
 
@@ -45,7 +44,6 @@ public:
         audioFileTransportController.getView().setVisible (false);
 
         addAndMakeVisible (audioSourceTypeSelectorController.getSelector());
-        addAndMakeVisible (channelTypeSelector.getSelector());
 
         gainLabel.setJustificationType  (Justification::centredLeft);
         gainSlider.setRange (0.0, 100.0, 0.01);
@@ -60,6 +58,22 @@ public:
         addAndMakeVisible (pitchEstimationVisualiser);
     }
 
+    ~AnalyserTrack()
+    {
+        setAudioSourceTypeChangedCallback (nullptr);
+        setAddressChangedCallback         (nullptr);
+        setBundleAddressChangedCallback   (nullptr);                                         
+        setFileDroppedCallback            (nullptr);
+        setPlayPressedCallback            (nullptr);
+        setPausePressedCallback           (nullptr);
+        setRestartPressedCallback         (nullptr);
+        setStopPressedCallback            (nullptr);
+        setOnsetSensitivityCallback       (nullptr);
+        setOnsetWindowSizeCallback        (nullptr);
+        setOnsetDetectionTypeCallback     (nullptr);
+        setFeatureValueQueryCallback      (nullptr);
+        setGainChangedCallback            (nullptr);
+    }
     void resized() override
     {
         auto& localBounds = getLocalBounds();
@@ -82,7 +96,6 @@ public:
     PitchEstimationVisualiser& getPitchEstimationVisualiser() { return pitchEstimationVisualiser; }
 
     void setAudioSourceTypeChangedCallback (std::function<void (eAudioSourceType type)> f) { audioSourceTypeSelectorController.setAudioSourceTypeChangedCallback (f); }
-    void setChannelTypeChangedCallback     (std::function<void (eChannelType)> f)          { channelTypeSelector.setAudioSourceTypeChangedCallback (f); }
     void setAddressChangedCallback (std::function<bool (String)> f)                        { oscSettingsController.setAddressChangedCallback (f); }
     void setDisplayedOSCAddress (String address)                                           { oscSettingsController.getView().getAddressEditor().setText (address); }
     void setBundleAddressChangedCallback (std::function<void (String)> f)                  { oscSettingsController.setBundleAddressChangedCallback (f); }
@@ -123,7 +136,6 @@ private:
     OSCSettingsController                       oscSettingsController;
     PitchEstimationVisualiser                   pitchEstimationVisualiser;
     AudioSourceSelectorController<>             audioSourceTypeSelectorController;
-    AudioSourceSelectorController<eChannelType> channelTypeSelector;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AnalyserTrack);
 };

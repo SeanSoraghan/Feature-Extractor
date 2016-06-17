@@ -43,7 +43,6 @@ public:
 
         const float lagEstimate = getLagEstimateFromCumulativeDifference (cumulativeNormalisedDifferenceBuffer, 0);
         const double pitchEstimate = (fft.getNyquist() * 2.0f) / lagEstimate;
-        DBG("pitch: "<<pitchEstimate / 5000.0);
         return pitchEstimate / 5000.0;
     }
 

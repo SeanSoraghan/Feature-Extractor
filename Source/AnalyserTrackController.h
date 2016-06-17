@@ -28,23 +28,30 @@ public:
         deviceManager.addAudioCallback (&audioDataCollector);
         audioFilePlayer.setupAudioCallback (deviceManager);
 
-        audioAnalyser.startThread (1);
+        
     }
 
     ~AnalyserTrackController()
     {
-        audioAnalyser.stopThread (100);
+        audioDataCollector.setBufferToDrawUpdatedCallback  (nullptr);
+        audioDataCollector.setNotifyAnalysisThreadCallback (nullptr);
+        audioAnalyser.setOnsetDetectedCallback             (nullptr);
+        setGUITrackSamplesPerBlockCallback                = nullptr;
+        stopAnalysis();
         deviceManager.removeAudioCallback (audioFilePlayer.getAudioSourcePlayer());
         deviceManager.removeAudioCallback (&audioDataCollector);
     }
 
     void linkGUIDisplayToTrack (AnalyserTrack* guiTrack, CustomAudioDeviceSetupDetails& audioSetupDetails)
     {
+        stopAnalysis();
+
         audioDataCollector.setBufferToDrawUpdatedCallback ([this, guiTrack] (AudioSampleBuffer& b) 
         {
             MessageManager::getInstance()->callAsync ([this, b, guiTrack]()
             {
-                guiTrack->getAudioDisplayComponent().pushBuffer (b);
+                if (guiTrack != nullptr)
+                    guiTrack->getAudioDisplayComponent().pushBuffer (b);
             });
         });
 
@@ -71,8 +78,6 @@ public:
             guiTrack->toggleShowTransportControls (type == eAudioSourceType::enAudioFile);
             guiTrack->clearAudioDisplayData();
         });
-
-        guiTrack->setChannelTypeChangedCallback ([this] (eChannelType t) { audioDataCollector.setChannelToCollect ((int) t); });
         
         guiTrack->setFileDroppedCallback ([this, guiTrack] (File& f) 
         { 
@@ -163,11 +168,15 @@ public:
             if (guiTrack != nullptr)
                 guiTrack->getAudioDisplayComponent().setSamplesPerBlock (samplesPerBlockExpected);
         };
+
+        AudioDeviceManager::AudioDeviceSetup setup;
+        deviceManager.getAudioDeviceSetup (setup);
+        prepareToPlay (setup.bufferSize, setup.sampleRate);
     }
 
     void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
     {
-        audioAnalyser.stopThread (100);
+        stopAnalysis();
         audioAnalyser.sampleRateChanged (sampleRate);
 
         if (setGUITrackSamplesPerBlockCallback != nullptr)
@@ -175,6 +184,11 @@ public:
         
         audioAnalyser.startThread (4);
         audioDataCollector.setExpectedSamplesPerBlock (samplesPerBlockExpected);
+    }
+
+    void stopAnalysis()
+    {
+        audioAnalyser.stopThread (100);
     }
 private:
     std::function<void (int)> setGUITrackSamplesPerBlockCallback;

@@ -31,9 +31,11 @@ public:
         
         view.setAudioSettingsDeviceManager (deviceManager);
         //deviceManager.addAudioCallback (&view.getAudioDisplayComponent());
+        addAndMakeVisible (view);
+
         updateAnalysisTracksFromDeviceManager (&deviceManager);
 
-        addAndMakeVisible (view);
+        
     }
 
     ~MainContentComponent()
@@ -45,7 +47,8 @@ public:
     //=======================================================================
     void prepareToPlay (int samplesPerBlockExpected, double sampleRate) override
     {
-        //call prepare to play on all tracks.
+        for (const auto track : analyserControllers)
+            track->prepareToPlay (samplesPerBlockExpected, sampleRate);
     }
 
     void getNextAudioBlock (const AudioSourceChannelInfo& bufferToFill) override
@@ -98,8 +101,8 @@ public:
 
     void updateAnalysisTracksFromDeviceManager (AudioDeviceManager* dm)
     {
-        analyserControllers.clear();
-        view.clearAnalyserTracks();
+        clearAllTracks();
+
         const auto currentDevice = dm->getCurrentAudioDevice();
         const auto activeInputs  = currentDevice->getActiveInputChannels();
         int channel = activeInputs.findNextSetBit (0);
@@ -109,8 +112,17 @@ public:
             DBG("Set Channel: "<<channel);
             channel = activeInputs.findNextSetBit (channel + 1);            
         }
+        resized();
     }
 
+    void clearAllTracks()
+    {
+        for (const auto track : analyserControllers)
+            track->stopAnalysis();
+
+        analyserControllers.clear();
+        view.clearAnalyserTracks();
+    }
 private:
     SharedResourcePointer<FeatureExtractorLookAndFeel> lookAndFeel;
     OwnedArray<AnalyserTrackController>                analyserControllers;

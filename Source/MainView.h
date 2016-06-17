@@ -42,49 +42,6 @@ public:
 
         for (const auto& track : analysers)
             track->setBounds (localBounds.removeFromTop (trackHeight));
-
-        //auto localBounds = getLocalBounds();
-        //const int verticalMargin           = (int) (FeatureExtractorLookAndFeel::getVerticalMargin());
-        //const int horizontalMargin         = (int) (FeatureExtractorLookAndFeel::getHorizontalMargin());
-
-        //const int availableHeight          = localBounds.getHeight() - 2 * verticalMargin;
-        //const int settingsHeight           = (int) (FeatureExtractorLookAndFeel::getSettingsHeightRatio() * availableHeight);
-        //const int displayHeight            = (int) (FeatureExtractorLookAndFeel::getAudioDisplayHeightRatio() * availableHeight * 2.0f);
-        //const int featureVisualiserHeight  = (int) (FeatureExtractorLookAndFeel::getFeatureVisualiserComponentHeightRatio() * availableHeight);
-
-        //auto trackBounds = localBounds.removeFromTop     (displayHeight);
-        //const auto componentWidth = trackBounds.getWidth() / 2;
-        //const auto channelSelectorBounds = trackBounds.removeFromLeft (componentWidth);
-
-        //if (channelSelector != nullptr)
-        //    channelSelector->setBounds (channelSelectorBounds);            
-
-        //audioScrollingDisplay.setBounds                  (trackBounds.removeFromLeft (componentWidth));
-        //audioFileTransportController.getView().setBounds (audioScrollingDisplay.getBounds());
-        //auto gainBounds = localBounds.removeFromTop      (verticalMargin).reduced ((int) (getWidth() * 0.35f), (int) (verticalMargin * 0.2f));
-        //featureListView.setBounds                        (localBounds.removeFromTop (featureVisualiserHeight));
-        //localBounds.removeFromTop                        (verticalMargin);
-
-        //auto settingsBounds = localBounds.removeFromTop (settingsHeight).reduced (horizontalMargin, 0);
-        //const auto panelWidth = (settingsBounds.getWidth() - horizontalMargin) / 2;
-        //if (audioDeviceSelector)
-        //{
-        //    audioDeviceSelector->setBounds (settingsBounds.removeFromLeft (panelWidth));
-        //    settingsBounds.removeFromLeft  (horizontalMargin);
-        //}
-        //oscSettingsController.getView().setBounds (settingsBounds.removeFromLeft (panelWidth));
-
-        //auto displayBounds = audioScrollingDisplay.getBounds();
-        //auto selectorBounds = displayBounds.removeFromTop  (FeatureExtractorLookAndFeel::getAudioSourceTypeSelectorHeight());
-        //auto audioSourceSelectorBounds = selectorBounds.removeFromLeft (FeatureExtractorLookAndFeel::getAudioSourceTypeSelectorWidth());
-        //auto sourceTypeSelectorBounds = selectorBounds.removeFromRight (FeatureExtractorLookAndFeel::getAudioSourceTypeSelectorWidth());
-        //audioSourceTypeSelectorController.getSelector().setBounds (audioSourceSelectorBounds);
-        //channelTypeSelector.getSelector().setBounds (sourceTypeSelectorBounds);
-
-        //gainLabel.setBounds  (gainBounds.removeFromLeft (gainBounds.getWidth() / 2));
-        //gainSlider.setBounds (gainBounds);
-
-        //pitchEstimationVisualiser.setBounds (getLocalBounds().withSizeKeepingCentre (400, 400));
     }
 
     
@@ -127,7 +84,7 @@ public:
 private:
     ScopedPointer<ChannelSelectorPanel>               channelSelector;
     ScopedPointer<CustomAudioDeviceSelectorComponent> audioDeviceSelector;
-    OwnedArray<AnalyserTrack> analysers;
+    OwnedArray<AnalyserTrack>                         analysers;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainView)
 };
 
