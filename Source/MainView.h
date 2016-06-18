@@ -29,7 +29,7 @@ public:
     {
         auto& localBounds = getLocalBounds();
 
-        const auto trackHeight = 100;
+        const auto trackHeight = 400;
 
         for (const auto& track : analysers)
             track->setBounds (localBounds.removeFromTop (trackHeight));

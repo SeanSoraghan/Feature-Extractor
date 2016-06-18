@@ -48,11 +48,7 @@ public:
 
         audioDataCollector.setBufferToDrawUpdatedCallback ([this, guiTrack] (AudioSampleBuffer& b) 
         {
-            MessageManager::getInstance()->callAsync ([this, b, guiTrack]()
-            {
-                if (guiTrack != nullptr)
-                    guiTrack->getAudioDisplayComponent().pushBuffer (b);
-            });
+            guiTrack->updateBufferToPush (&b);
         });
 
         audioAnalyser.setOnsetDetectedCallback ([this, guiTrack] () 
@@ -92,59 +88,70 @@ public:
         } );
 
         //Overlapped audio visuals
-        //guiTrack->getPitchEstimationVisualiser().getOverlappedBufferVisualiser().setGetBufferCallback ([this]()
-        //{
-        //    return audioAnalyser.getOverlapper().getBufferToDraw();
-        //});
+        guiTrack->getPitchEstimationVisualiser().getOverlappedBufferVisualiser().setGetBufferCallback ([this]()
+        {
+            return audioAnalyser.getOverlapper().getBufferToDraw();
+        });
 
-        //guiTrack->getPitchEstimationVisualiser().getOverlappedBufferVisualiser().setTagBufferForUpdateCallback ([this]()
-        //{
-        //    audioAnalyser.getOverlapper().enableBufferToDrawNeedsUpdating();
-        //});
+        guiTrack->getPitchEstimationVisualiser().getOverlappedBufferVisualiser().setTagBufferForUpdateCallback ([this]()
+        {
+            audioAnalyser.getOverlapper().enableBufferToDrawNeedsUpdating();
+        });
 
-        ////Overlapped audio visuals
-        //guiTrack->getPitchEstimationVisualiser().getFFTBufferVisualiser().setGetBufferCallback ([this]()
-        //{
-        //    return audioAnalyser.getFFTAnalyser().getFFTBufferToDraw();
-        //});
+        //Overlapped audio visuals
+        guiTrack->getPitchEstimationVisualiser().getFFTBufferVisualiser().setGetBufferCallback ([this]()
+        {
+            return audioAnalyser.getFFTAnalyser().getFFTBufferToDraw();
+        });
 
-        //guiTrack->getPitchEstimationVisualiser().getFFTBufferVisualiser().setTagBufferForUpdateCallback ([this]()
-        //{
-        //    audioAnalyser.getFFTAnalyser().enableFFTBufferToDrawNeedsUpdating();
-        //});
+        guiTrack->getPitchEstimationVisualiser().getFFTBufferVisualiser().setTagBufferForUpdateCallback ([this]()
+        {
+            audioAnalyser.getFFTAnalyser().enableFFTBufferToDrawNeedsUpdating();
+        });
 
-        ////autocorrelation visuals
-        //guiTrack->getPitchEstimationVisualiser().getAutoCorrelationBufferVisualiser().setGetBufferCallback ([this]()
-        //{
-        //    return audioAnalyser.getPitchAnalyser().getAutoCorrelationBufferToDraw();
-        //});
+        //autocorrelation visuals
+        guiTrack->getPitchEstimationVisualiser().getAutoCorrelationBufferVisualiser().setGetBufferCallback ([this]()
+        {
+            return audioAnalyser.getPitchAnalyser().getAutoCorrelationBufferToDraw();
+        });
 
-        //guiTrack->getPitchEstimationVisualiser().getAutoCorrelationBufferVisualiser().setTagBufferForUpdateCallback ([this]()
-        //{
-        //    audioAnalyser.getPitchAnalyser().enableAutoCorrelationBufferToDrawNeedsUpdating();
-        //});
+        guiTrack->getPitchEstimationVisualiser().getAutoCorrelationBufferVisualiser().setTagBufferForUpdateCallback ([this]()
+        {
+            audioAnalyser.getPitchAnalyser().enableAutoCorrelationBufferToDrawNeedsUpdating();
+        });
 
-        ////cumulative differnece visuals
-        //guiTrack->getPitchEstimationVisualiser().getCumulativeDifferenceBufferVisualiser().setGetBufferCallback ([this]()
-        //{
-        //    return audioAnalyser.getPitchAnalyser().getCumulativeDifferenceBufferToDraw();
-        //});
+        //cumulative differnece visuals
+        guiTrack->getPitchEstimationVisualiser().getCumulativeDifferenceBufferVisualiser().setGetBufferCallback ([this]()
+        {
+            return audioAnalyser.getPitchAnalyser().getCumulativeDifferenceBufferToDraw();
+        });
 
-        //guiTrack->getPitchEstimationVisualiser().getCumulativeDifferenceBufferVisualiser().setGetPeakPositionCallback ([this]()
-        //{
-        //    return audioAnalyser.getPitchAnalyser().getNormalisedLagPosition();
-        //});
+        guiTrack->getPitchEstimationVisualiser().getCumulativeDifferenceBufferVisualiser().setGetPeakPositionCallback ([this]()
+        {
+            return audioAnalyser.getPitchAnalyser().getNormalisedLagPosition();
+        });
 
-        //guiTrack->getPitchEstimationVisualiser().getCumulativeDifferenceBufferVisualiser().setTagBufferForUpdateCallback ([this]()
-        //{
-        //    audioAnalyser.getPitchAnalyser().enableCumulativeDifferenceBufferNeedsUpdating();
-        //});
+        guiTrack->getPitchEstimationVisualiser().getCumulativeDifferenceBufferVisualiser().setTagBufferForUpdateCallback ([this]()
+        {
+            audioAnalyser.getPitchAnalyser().enableCumulativeDifferenceBufferNeedsUpdating();
+        });
 
-        ////Pitch value visuals
-        //guiTrack->getPitchEstimationVisualiser().setGetPitchEstimateCallback ([this]()
-        //{
-        //    return audioAnalyser.getAudioFeature (AudioFeatures::eAudioFeature::enF0);
-        //});
+        //fft magnitudes visuals
+        guiTrack->getPitchEstimationVisualiser().getFFTMagnitudesVisualiser().setGetBufferCallback ([this]()
+        {
+            return audioAnalyser.getHarmonicAnalyser().getFFTMagnitudesToDraw();
+        });
+
+        guiTrack->getPitchEstimationVisualiser().getFFTMagnitudesVisualiser().setTagBufferForUpdateCallback ([this]()
+        {
+            audioAnalyser.getHarmonicAnalyser().enableFFTMagnitudesBufferNeedsUpdating();
+        });
+
+        //Pitch value visuals
+        guiTrack->getPitchEstimationVisualiser().setGetPitchEstimateCallback ([this]()
+        {
+            return audioAnalyser.getAudioFeature (AudioFeatures::eAudioFeature::enF0);
+        });
 
         guiTrack->setGainChangedCallback ([this] (float g) { audioDataCollector.setGain (g); });
 

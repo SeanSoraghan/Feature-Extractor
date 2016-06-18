@@ -29,15 +29,27 @@ public:
 
         if (autoCorrelationDisplayBufferNeedsUpdating.get() == 1)
         {
-            autoCorrelationBufferToDraw = AudioSampleBuffer (autoCorrelationBuffer);
+            AudioSampleBuffer dataToDraw (autoCorrelationBuffer.getNumChannels(), autoCorrelationBuffer.getNumSamples() / 2);
+            dataToDraw.clear();
+
+            for (int ch = 0; ch < dataToDraw.getNumChannels(); ++ch)
+                dataToDraw.copyFrom (ch, 0, autoCorrelationBuffer, ch, 0, autoCorrelationBuffer.getNumSamples() / 2);
+            
+            autoCorrelationBufferToDraw = AudioSampleBuffer (dataToDraw);
             autoCorrelationDisplayBufferNeedsUpdating.set (0);
         }
 
         AudioSampleBuffer cumulativeNormalisedDifferenceBuffer = getCumulativeNormalisedDifferenceFromAutoCorrelationBuffer (autoCorrelationBuffer);
 
         if (cumulativeDifferenceBufferNeedsUpdating.get() == 1)
-        {
-            cumulativeDifferenceBufferToDraw = AudioSampleBuffer (cumulativeNormalisedDifferenceBuffer);
+        { 
+            AudioSampleBuffer dataToDraw (cumulativeNormalisedDifferenceBuffer.getNumChannels(), cumulativeNormalisedDifferenceBuffer.getNumSamples() / 2);
+            dataToDraw.clear();
+
+            for (int ch = 0; ch < dataToDraw.getNumChannels(); ++ch)
+                dataToDraw.copyFrom (ch, 0, cumulativeNormalisedDifferenceBuffer, ch, 0, cumulativeNormalisedDifferenceBuffer.getNumSamples() / 2);
+            
+            cumulativeDifferenceBufferToDraw = AudioSampleBuffer (dataToDraw);
             cumulativeDifferenceBufferNeedsUpdating.set (0);
         }
 

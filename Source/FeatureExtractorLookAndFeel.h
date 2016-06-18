@@ -296,23 +296,25 @@ public:
     // Buffer drawing functions
     //================================================================================
 
-    static void drawBuffer (Graphics& g, Rectangle<float> bounds, AudioSampleBuffer buffer, int numSamples)
+    static void drawBuffer (Graphics& g, Rectangle<float> bounds, AudioSampleBuffer buffer)
     {
         const int numChannels = buffer.getNumChannels();
-        jassert (numSamples  <= buffer.getNumSamples());
+        const int numSamplesToDraw = buffer.getNumSamples();
+        const int startSampleToDraw = 0;
+        jassert (numSamplesToDraw <= buffer.getNumSamples() && startSampleToDraw + numSamplesToDraw <= buffer.getNumSamples());
 
         g.setColour (FeatureExtractorLookAndFeel::getBufferBackgroundColour());
         g.fillRect  (bounds);
 
         const auto channelHeight   = bounds.getHeight() / numChannels;
-        const auto binWidth        = bounds.getWidth() / (float) numSamples;
+        const auto binWidth        = bounds.getWidth()  / (float) numSamplesToDraw;
         const auto visualAmplifier = 1.0f;
         RectangleList<float> bins;
         for (int channel = 0; channel < numChannels; channel++)
         {
             auto channelBounds = bounds.removeFromTop (channelHeight);
             
-            for (int s = 0; s < numSamples; s++)
+            for (int s = startSampleToDraw; s < numSamplesToDraw; s++)
             {
                 const auto sampleValue = buffer.getSample (channel, s) * visualAmplifier; 
                 const auto binBounds    = channelBounds.removeFromLeft (binWidth).removeFromBottom (sampleValue * channelHeight); 
@@ -323,23 +325,25 @@ public:
         g.fillRectList (bins);
     }
 
-    static void drawBipolarBuffer (Graphics& g, Rectangle<float> bounds, AudioSampleBuffer buffer, int numSamples)
+    static void drawBipolarBuffer (Graphics& g, Rectangle<float> bounds, AudioSampleBuffer buffer)
     {
         const int numChannels = buffer.getNumChannels();
-        jassert (numSamples  <= buffer.getNumSamples());
+        const int numSamplesToDraw = buffer.getNumSamples();
+        const int startSampleToDraw = 0;
+        jassert (numSamplesToDraw  <= buffer.getNumSamples() && startSampleToDraw + numSamplesToDraw <= buffer.getNumSamples());
 
         g.setColour (FeatureExtractorLookAndFeel::getBufferBackgroundColour());
         g.fillRect  (bounds);
 
         const auto channelHeight   = bounds.getHeight() / numChannels;
-        const auto binWidth        = bounds.getWidth() / (float) numSamples;
+        const auto binWidth        = bounds.getWidth() / (float) numSamplesToDraw;
         const auto visualAmplifier = 1.0f;
         RectangleList<float> samples;
         for (int channel = 0; channel < numChannels; channel++)
         {
             auto channelBounds = bounds.removeFromTop (channelHeight);
 
-            for (int s = 0; s < numSamples; s++)
+            for (int s = startSampleToDraw; s < numSamplesToDraw; s++)
             {
                 auto sampleBounds = channelBounds.removeFromLeft (binWidth);
                 const auto sampleValue = buffer.getSample (channel, s) * visualAmplifier; 

@@ -55,7 +55,7 @@ public:
 
         addAndMakeVisible (channelNameLabel);
 
-        //addAndMakeVisible (pitchEstimationVisualiser);
+        addAndMakeVisible (pitchEstimationVisualiser);
     }
 
     ~AnalyserTrack()
@@ -73,20 +73,24 @@ public:
         setOnsetDetectionTypeCallback     (nullptr);
         setFeatureValueQueryCallback      (nullptr);
         setGainChangedCallback            (nullptr);
+        pitchEstimationVisualiser.clearCallbacks();
     }
     void resized() override
     {
-        auto& localBounds = getLocalBounds();
-        const auto& availableWidth = localBounds.getWidth();
+        auto& localBounds                = getLocalBounds();
+        auto& trackBounds                = localBounds.removeFromTop (150);//<- magic number to go in LnF
+        const auto& availableWidth       = trackBounds.getWidth();
         const auto& audioDisplayWidth    = (int)(availableWidth * 0.75f);
         const auto& oscWidth             = (int)(availableWidth * 0.25f);
-
-        auto& audioAndFeaturesBounds =  localBounds.removeFromLeft (audioDisplayWidth);
-        const int displayHeight = audioAndFeaturesBounds.getHeight() / 2; 
+        auto& audioAndFeaturesBounds     = trackBounds.removeFromLeft (audioDisplayWidth);
+        const int displayHeight          = audioAndFeaturesBounds.getHeight() / 2; 
+        //visualiser, features, osc
         audioScrollingDisplay.setBounds           (audioAndFeaturesBounds.removeFromTop (displayHeight));
         featureListView.setBounds                 (audioAndFeaturesBounds.removeFromTop (displayHeight));
-        oscSettingsController.getView().setBounds (localBounds.removeFromLeft (audioDisplayWidth));
-
+        oscSettingsController.getView().setBounds (trackBounds.removeFromLeft (audioDisplayWidth));
+        //Pitch estimation visualiser
+        const auto w = localBounds.getWidth() / 2;
+        pitchEstimationVisualiser.setBounds       (localBounds);//.removeFromLeft (w));
         channelNameLabel.setBounds (getLocalBounds().removeFromTop (20).removeFromLeft (100));
     }
 
@@ -98,7 +102,7 @@ public:
     }
 
     AudioVisualiserComponent&  getAudioDisplayComponent()     { return audioScrollingDisplay; }
-    //PitchEstimationVisualiser& getPitchEstimationVisualiser() { return pitchEstimationVisualiser; }
+    PitchEstimationVisualiser& getPitchEstimationVisualiser() { return pitchEstimationVisualiser; }
 
     void setAudioSourceTypeChangedCallback (std::function<void (eAudioSourceType type)> f) { audioSourceTypeSelectorController.setAudioSourceTypeChangedCallback (f); }
     void setAddressChangedCallback (std::function<bool (String)> f)                        { oscSettingsController.setAddressChangedCallback (f); }
@@ -124,6 +128,18 @@ public:
         });   
     }
 
+    void updateBufferToPush (AudioSampleBuffer* buffer)
+    {
+        if (buffer != nullptr)
+        {
+            bufferToPush = AudioSampleBuffer (*buffer);
+            MessageManager::getInstance()->callAsync ([this]()
+            {
+                audioScrollingDisplay.pushBuffer (bufferToPush);
+            });
+        }
+    }
+
     void setOnsetSensitivityCallback   (std::function<void (float)> f)                                         { featureListView.setOnsetSensitivityCallback (f); }
     void setOnsetWindowSizeCallback    (std::function<void (int)> f)                                           { featureListView.setOnsetWindowLengthCallback (f); }
     void setOnsetDetectionTypeCallback (std::function<void (OnsetDetector::eOnsetDetectionType)> f)            { featureListView.setOnsetDetectionTypeCallback (f); }
@@ -135,12 +151,13 @@ private:
     Label                           channelNameLabel;
     Label                           gainLabel;
     Slider                          gainSlider;
+    AudioSampleBuffer               bufferToPush;
     AudioVisualiserComponent        audioScrollingDisplay;
     AudioFileTransportController    audioFileTransportController;
     FeatureListModel                featureListModel;
     FeatureListView                 featureListView;
     OSCSettingsController           oscSettingsController;
-    //PitchEstimationVisualiser       pitchEstimationVisualiser;
+    PitchEstimationVisualiser       pitchEstimationVisualiser;
     AudioSourceSelectorController<> audioSourceTypeSelectorController;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AnalyserTrack);

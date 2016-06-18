@@ -114,9 +114,11 @@ public:
 
             /* Apply windowing function */
             windower.scaleBufferWithBartlettWindowing (filteredAudio);
-            
+            windower.scaleBufferWithBartlettWindowing (audioWindow);
+
             /* Compute FFT */
-            AudioSampleBuffer frequencyBuffer = fft.getFrequencyData (filteredAudio);
+            AudioSampleBuffer filteredFrequencyBuffer = fft.getFrequencyData (filteredAudio);
+            AudioSampleBuffer frequencyBuffer = fft.getFrequencyData (audioWindow);
 
             /* Get spectral features */
             SpectralCharacteristics spectralFeatures = spectralAnalyser.calculateSpectralCharacteristics (frequencyBuffer, 0, fft.getNyquist());
@@ -132,7 +134,7 @@ public:
                 onsetDetectedCallback();
             
             /* Estimate Pitch */
-            double f0Estimate = pitchEstimator.estimatePitch (frequencyBuffer);
+            double f0Estimate = pitchEstimator.estimatePitch (filteredFrequencyBuffer);
             const double f0NormalisationFactor = 5000.0;
             features.updateFeature (AudioFeatures::eAudioFeature::enF0, (float) (f0Estimate / f0NormalisationFactor));
 
@@ -172,11 +174,12 @@ public:
     void sampleRateChanged     (double newSampleRate)                           { fft.setNyquistValue (newSampleRate / 2.0); }
     float getAudioFeature      (AudioFeatures::eAudioFeature featureType) const { return features.getValue (featureType); }
 
-    RealTimeAudioDataOverlapper& getOverlapper()    { return overlapper; }
-    FFTAnalyser&                 getFFTAnalyser()   { return fft; }
-    PitchAnalyser&               getPitchAnalyser() { return pitchEstimator; }
-    OnsetDetector&               getOnsetDetector() { return onsetDetector; }
-
+    RealTimeAudioDataOverlapper&     getOverlapper()       { return overlapper; }
+    FFTAnalyser&                     getFFTAnalyser()      { return fft; }
+    PitchAnalyser&                   getPitchAnalyser()    { return pitchEstimator; }
+    OnsetDetector&                   getOnsetDetector()    { return onsetDetector; }
+    HarmonicCharacteristicsAnalyser& getHarmonicAnalyser() { return harmonicAnalyser; }
+    SpectralCharacteristicsAnalyser& getSpectralAnalyser() { return spectralAnalyser; }
 private:
     AudioDataCollector&             audioDataCollector;
     AudioFilter                     filter;

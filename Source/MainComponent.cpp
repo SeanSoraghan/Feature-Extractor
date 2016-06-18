@@ -79,7 +79,7 @@ public:
     void resized() override
     {
         auto& localBounds = getLocalBounds();
-        const auto testH = localBounds.getHeight() / 2;
+        const auto testH = (int) ((float) localBounds.getHeight() * 0.25f);
         auto& selectorBounds = localBounds.removeFromTop (testH);
         const auto channelSelectorWidth = selectorBounds.getWidth() / 2;
         const auto& channelSelectorBounds = selectorBounds.removeFromLeft (channelSelectorWidth);

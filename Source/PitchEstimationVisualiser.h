@@ -25,7 +25,8 @@ public:
 
     void paint (Graphics& g) override
     {
-        FeatureExtractorLookAndFeel::drawBipolarBuffer (g, getLocalBounds().toFloat(), bufferCopy, bufferCopy.getNumSamples());
+        bufferIsBipolar ? FeatureExtractorLookAndFeel::drawBipolarBuffer (g, getLocalBounds().toFloat(), bufferCopy)
+                        : FeatureExtractorLookAndFeel::drawBuffer        (g, getLocalBounds().toFloat(), bufferCopy);
         
         if (bufferHasPeak)
             FeatureExtractorLookAndFeel::drawPeakPoint (g, getLocalBounds().toFloat(), peakPosition);
@@ -55,8 +56,8 @@ private:
     std::function<void()>              tagBufferForUpdate;
     std::function<Point<float>()>      getPeakPosition;
     Point<float>                       peakPosition {0.0f, 0.0f};
-    bool                               bufferIsBipolar;
-    bool                               bufferHasPeak { false };
+    bool                               bufferIsBipolar   { true };
+    bool                               bufferHasPeak     { false };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BufferVisualiser)
 };
@@ -69,12 +70,15 @@ class PitchEstimationVisualiser : public Component
 {
 public:
     PitchEstimationVisualiser() 
-    :   cumulativeDifferenceBufferVisualiser (true, true)
+    :   autoCorrelationBufferVisualiser      (false),
+        cumulativeDifferenceBufferVisualiser (false, true),
+        fftMagnitudesVisualiser              (false)
     {
         addAndMakeVisible (overlappedBufferVisualiser);
         addAndMakeVisible (fftBufferVisualiser);
         addAndMakeVisible (autoCorrelationBufferVisualiser);
         addAndMakeVisible (cumulativeDifferenceBufferVisualiser);
+        addAndMakeVisible (fftMagnitudesVisualiser);
     }
 
     void paintOverChildren (Graphics& g)
@@ -82,24 +86,48 @@ public:
         if (getPitchEstimate != nullptr)
         {
             const auto visBounds = getLocalBounds().withSizeKeepingCentre (2, (int) (getHeight() * 0.8f));
-            FeatureExtractorLookAndFeel::paintFeatureVisualiser (g, getPitchEstimate() / maxFrequency, visBounds);
+            FeatureExtractorLookAndFeel::paintFeatureVisualiser (g, getPitchEstimate(), visBounds);
         }
     }
 
     void resized() override
     {
         auto localBounds = getLocalBounds().toFloat();
-        const auto bufferVisualiserHeight = localBounds.getHeight() / (float) numVisualisers;
-        overlappedBufferVisualiser.setBounds (localBounds.removeFromTop (bufferVisualiserHeight).getSmallestIntegerContainer());
-        fftBufferVisualiser.setBounds (localBounds.removeFromTop (bufferVisualiserHeight).getSmallestIntegerContainer());
-        autoCorrelationBufferVisualiser.setBounds (localBounds.removeFromTop (bufferVisualiserHeight).getSmallestIntegerContainer());
-        cumulativeDifferenceBufferVisualiser.setBounds (localBounds.removeFromTop (bufferVisualiserHeight).getSmallestIntegerContainer());
+
+        const auto bufferVisualiserHeight            = localBounds.getHeight() / (float) numVisualisers;
+        const auto halfBufferWidth                   = localBounds.getWidth() / 2.0f;
+        overlappedBufferVisualiser.setBounds           (localBounds.removeFromTop (bufferVisualiserHeight).getSmallestIntegerContainer());
+        fftBufferVisualiser.setBounds                  (localBounds.removeFromTop (bufferVisualiserHeight).getSmallestIntegerContainer());
+        auto& autoCorrelationAndFFTMagBounds          = localBounds.removeFromTop (bufferVisualiserHeight);
+        autoCorrelationBufferVisualiser.setBounds      (autoCorrelationAndFFTMagBounds.removeFromLeft (halfBufferWidth).getSmallestIntegerContainer());
+        fftMagnitudesVisualiser.setBounds              (autoCorrelationAndFFTMagBounds.removeFromLeft (halfBufferWidth).getSmallestIntegerContainer());
+        cumulativeDifferenceBufferVisualiser.setBounds (localBounds.removeFromTop (bufferVisualiserHeight).removeFromLeft (halfBufferWidth).getSmallestIntegerContainer());
+    }
+
+    void clearCallbacks()
+    {
+        overlappedBufferVisualiser.setGetBufferCallback                    (nullptr);
+        overlappedBufferVisualiser.setTagBufferForUpdateCallback           (nullptr);
+        overlappedBufferVisualiser.setGetPeakPositionCallback              (nullptr);
+        fftBufferVisualiser.setGetBufferCallback                           (nullptr);
+        fftBufferVisualiser.setTagBufferForUpdateCallback                  (nullptr);
+        fftBufferVisualiser.setGetPeakPositionCallback                     (nullptr);
+        autoCorrelationBufferVisualiser.setGetBufferCallback               (nullptr);
+        autoCorrelationBufferVisualiser.setTagBufferForUpdateCallback      (nullptr);
+        autoCorrelationBufferVisualiser.setGetPeakPositionCallback         (nullptr);
+        cumulativeDifferenceBufferVisualiser.setGetBufferCallback          (nullptr);
+        cumulativeDifferenceBufferVisualiser.setTagBufferForUpdateCallback (nullptr);
+        cumulativeDifferenceBufferVisualiser.setGetPeakPositionCallback    (nullptr);
+        fftMagnitudesVisualiser.setGetBufferCallback                       (nullptr);
+        fftMagnitudesVisualiser.setTagBufferForUpdateCallback              (nullptr);
+        fftMagnitudesVisualiser.setGetPeakPositionCallback                 (nullptr);
     }
 
     BufferVisualiser& getOverlappedBufferVisualiser()           { return overlappedBufferVisualiser; }
     BufferVisualiser& getFFTBufferVisualiser()                  { return fftBufferVisualiser; }
     BufferVisualiser& getAutoCorrelationBufferVisualiser()      { return autoCorrelationBufferVisualiser; }
     BufferVisualiser& getCumulativeDifferenceBufferVisualiser() { return cumulativeDifferenceBufferVisualiser; }
+    BufferVisualiser& getFFTMagnitudesVisualiser()              { return fftMagnitudesVisualiser; }
     void setGetPitchEstimateCallback (std::function<float()> f) { getPitchEstimate = f; }
 
 private:
@@ -107,8 +135,8 @@ private:
     BufferVisualiser fftBufferVisualiser;
     BufferVisualiser autoCorrelationBufferVisualiser;
     BufferVisualiser cumulativeDifferenceBufferVisualiser;
+    BufferVisualiser fftMagnitudesVisualiser;
     std::function<float()> getPitchEstimate;
-    const float maxFrequency { 12000.0f };
     const int numVisualisers { 4 };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PitchEstimationVisualiser)

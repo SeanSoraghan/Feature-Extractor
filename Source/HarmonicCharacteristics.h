@@ -28,7 +28,7 @@ public:
     HarmonicCharacteristicsAnalyser () 
     {}
 
-    static HarmonicCharacteristics calculateHarmonicCharacteristics (AudioSampleBuffer& fftResults, double f0Estimation, double nyquist, int channel)
+    HarmonicCharacteristics calculateHarmonicCharacteristics (AudioSampleBuffer& fftResults, double f0Estimation, double nyquist, int channel)
     {
         std::vector<int> peakBins;
         peakBins.clear();
@@ -40,6 +40,7 @@ public:
         //calculate mean bin magnitude and maximum bin magnitude
         double meanMagnitude = 0.0;
         double magnitudeSum = 0.0;
+        double maxMagnitude = 0.0;
         std::vector<double> binMagnitudes ((size_t)numMagnitudes);
 
         for (int i = 0; i < numMagnitudes; i++)
@@ -48,6 +49,24 @@ public:
             double binMagnitude = binValue * binValue;
             binMagnitudes[i]    = binMagnitude;
             magnitudeSum       += binMagnitude;
+            if (binMagnitude > maxMagnitude)
+                maxMagnitude = binMagnitude;
+        }
+        
+        AudioSampleBuffer normedMagnitudes (1, numMagnitudes);
+        double sumNormedMagnitude = 0.0;
+        for (int bin = 0; bin < numMagnitudes; bin++)
+        {
+            double normedMagnitude = binMagnitudes[bin] / maxMagnitude;
+            normedMagnitudes.setSample (0, bin, (float) normedMagnitude);
+            sumNormedMagnitude += normedMagnitude;
+        }
+
+        if (fftMagnitudesToDrawNeedsUpdating.get() == 1)
+        {
+            fftMagnitudesToDraw.setSize (1, numMagnitudes);
+            fftMagnitudesToDraw = AudioSampleBuffer (normedMagnitudes);
+            fftMagnitudesToDrawNeedsUpdating.set (0);
         }
         meanMagnitude = magnitudeSum / (double) numMagnitudes;
 
@@ -57,7 +76,7 @@ public:
         fillPeakBins (binMagnitudes, channel, peakBins, meanMagnitude);
         
         double frequencyRangePerBin = nyquist / (double) numMagnitudes;
-        double harmonicEnergyRatio = calculateHarmonicEnergyRatio (binMagnitudes, f0Estimation, frequencyRangePerBin, magnitudeSum, 15.0);
+        double harmonicEnergyRatio = calculateHarmonicEnergyRatio (normedMagnitudes, f0Estimation, frequencyRangePerBin, sumNormedMagnitude, 15.0, 3.0);
         double inharmonicity = 0.0;
         if (f0Estimation > 0.0)
             inharmonicity = calculateInharmonicity (binMagnitudes, f0Estimation, frequencyRangePerBin, peakBins, magnitudeSum);
@@ -67,10 +86,14 @@ public:
         return {(float) logHER, (float) logInharm}; 
     }
 
-    static void fillPeakBins (std::vector<double>& binMagnitudes, 
-                       int channel, 
-                       std::vector<int>& peakBins,
-                       double meanMagnitude)
+    void enableFFTMagnitudesBufferNeedsUpdating()    { fftMagnitudesToDrawNeedsUpdating.set (1); }
+    const AudioSampleBuffer getFFTMagnitudesToDraw() { return AudioSampleBuffer (fftMagnitudesToDraw); }
+
+private:
+    AudioSampleBuffer fftMagnitudesToDraw;
+    Atomic<int>       fftMagnitudesToDrawNeedsUpdating;
+
+    static void fillPeakBins (std::vector<double>& binMagnitudes, int channel, std::vector<int>& peakBins, double meanMagnitude)
     {
         const int numMagnitudes  = (int) binMagnitudes.size();
         for (int bin = 0; bin < numMagnitudes; ++bin)
@@ -102,25 +125,49 @@ public:
         return true;
     }
 
-    static double  calculateHarmonicEnergyRatio (std::vector<double>& binMagnitudes, 
+    static double  calculateHarmonicEnergyRatio (AudioSampleBuffer& normalisedBinMagnitudes, 
                                                  double f0Estimate,
                                                  double frequencyRangePerBin, 
-                                                 double totalMagnitude, 
+                                                 double totalNormedMagnitude,
+                                                 double numLower,
                                                  double numHarmonics)
     {
         double harmonicScore = 0.0;
+        for (double lower = 1.0; lower < numLower + 1.0; ++lower)
+        {
+            double lowerHarmFreq = f0Estimate / pow(2.0, lower);
+            int lowerHarmBin = getBinForFrequency (lowerHarmFreq, frequencyRangePerBin);
+            
+            if (lowerHarmBin == getBinForFrequency (f0Estimate, frequencyRangePerBin))
+                continue;
+
+            double binMagnitude = getMaxBinInNeighbourhood (lowerHarmBin, 2, normalisedBinMagnitudes);//normalisedBinMagnitudes.getSample (0, harmonicBin);
+            harmonicScore += binMagnitude;
+        }
         for (double harmonic = 1.0; harmonic < numHarmonics + 1.0; harmonic++)
         {
             double harmonicFrequency = f0Estimate * harmonic;
-            int harmonicBin = (int) (floor (harmonicFrequency / frequencyRangePerBin));
+            int harmonicBin = getBinForFrequency (harmonicFrequency, frequencyRangePerBin);
 
-            if (harmonicBin >= (int) binMagnitudes.size())
+            if (harmonicBin >= normalisedBinMagnitudes.getNumSamples())
                 break;
 
-            double binMagnitude = binMagnitudes[harmonicBin];
+            double binMagnitude = getMaxBinInNeighbourhood (harmonicBin, 2, normalisedBinMagnitudes);//normalisedBinMagnitudes.getSample (0, harmonicBin);
             harmonicScore += binMagnitude;
         }
-        return harmonicScore / totalMagnitude;
+        return harmonicScore / totalNormedMagnitude;
+    }
+
+    static double getMaxBinInNeighbourhood (int centreBin, int neighbourhoodRange, AudioSampleBuffer& binMagnitudes)
+    {
+        const int numBins = binMagnitudes.getNumSamples();
+        int startIndex = centreBin - neighbourhoodRange >= 0 ? centreBin - neighbourhoodRange : 0;
+        int endIndex   = centreBin + neighbourhoodRange < numBins ? centreBin + neighbourhoodRange : numBins;
+        double maxMagnitude = binMagnitudes.getSample (0, centreBin);
+        for (int b = startIndex; b < endIndex; b++)
+            if (binMagnitudes.getSample (0, b) > maxMagnitude)
+                maxMagnitude = binMagnitudes.getSample (0, b);
+        return maxMagnitude;
     }
 
     static double calculateInharmonicity (std::vector<double>& binMagnitudes, double f0Estimate, 
@@ -130,7 +177,7 @@ public:
         double inharmonicity = 0.0;
         for (auto bin : peakBins)
         {
-            if (getBinForFrequency (binMagnitudes, f0Estimate, frequencyRangePerBin) == bin) //f0 exists in this bin, so don't add any inharmonicity score
+            if (getBinForFrequency (f0Estimate, frequencyRangePerBin) == bin) //f0 exists in this bin, so don't add any inharmonicity score
                 continue;
 
             double binStartFrequency = bin * frequencyRangePerBin;
@@ -154,9 +201,9 @@ public:
         }
         jassert (inharmonicity >= 0.0);
         return inharmonicity;
-    }
+    } 
 
-    static int getBinForFrequency (std::vector<double>& binMagnitudes, double freq, double frequencyRangePerBin)
+    static int getBinForFrequency (double freq, double frequencyRangePerBin)
     {
         return (int)(floor(freq / frequencyRangePerBin));
     }
@@ -170,8 +217,6 @@ public:
         double lower  = higher == frequency1 ? frequency2 : frequency1;
         return higher / lower;
     }
-
-private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (HarmonicCharacteristicsAnalyser)
 };
 
