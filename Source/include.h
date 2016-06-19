@@ -14,9 +14,21 @@
 #include "../JuceLibraryCode/JuceHeader.h"
 #include "FeatureExtractorLookAndFeel.h"
 
+#include "CustomChannelSelectorController.h"
+#include "CustomChannelSelectorPanel.h"
+#include "CustomAudioSettingsComponent.h"
+
+
+
 #include "AudioFilePlayer.h"
 
+
+
 #include "AudioDataCollector.h"
+#include "RealTimeAudioAnalysis.h"
+#include "PitchAnalyser.h"
+#include "SpectralCharacteristics.h"
+#include "HarmonicCharacteristics.h"
 #include "AudioFeatures.h"
 #include "AudioAnalysis.h"
 #include "RealTimeAnalyser.h"
@@ -27,8 +39,13 @@
 #include "AudioFeaturesListComponent.h"
 #include "AudioFileTransportComponent.h"
 #include "LiveScrollingAudioDisplay.h"
+#include "PitchEstimationVisualiser.h"
 #include "OSCSettings.h"
+#include "AnalyserTrack.h"
+#include "AnalyserTrackController.h"
 #include "MainView.h"
+
+
 
 
 #endif  // INCLUDE_H_INCLUDED

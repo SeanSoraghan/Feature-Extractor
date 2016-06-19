@@ -110,6 +110,8 @@ struct AudioAnalyser
         fftIn      (numChannels, windowSize),
         fftOut     (numChannels, windowSize / 2 + 1),
         fft        (/*order*/int (log(windowSize)/log(2) + 1e-6), /*inverse*/false),
+        complexForwardFFT (int (log(windowSize)/log(2) + 1e-6), false),
+        complexInverseFFT (int (log(windowSize)/log(2) + 1e-6), true),
         analyseSpectralCharacteristics (spectralFeatures),
         analyseHarmonicCharacteristics (harmonicFeatures)
     {
@@ -117,6 +119,11 @@ struct AudioAnalyser
 
         for (int i = 0; i < windowSize / 2 + 1; i++)
             previousBinMagnitudes.push_back (0.0);
+
+        //fftAutoCorrelationData.allocate (windowSize, true);
+        //complexFFTIn.allocate              (windowSize, true);
+        //complexFFTOut.allocate             (windowSize, true);
+        //complexFFTAutoCorrelation.allocate (windowSize, true);
     }
     
     void performSpectralAnalysis (ConcatenatedFeatureBuffer& features)
@@ -175,41 +182,74 @@ struct AudioAnalyser
             
             jassert (numFFTInputSamples <= 4096);
             float temp[4096];
+
+            if (analyseHarmonicCharacteristics)
+            {
+                auto floatIn = (const float*) fftIn.getReadPointer(0);
+                auto bytes = size_t (numFFTInputSamples) * sizeof(float);
+                memcpy((void*)temp, (void*)floatIn, bytes);
+                
+
+                auto fftInErr = 0.0f;
+                /* Testing complex FFT for FFT-based autocorrelation */
+
+               /* for (int index = 0; index < numFFTInputSamples; index++)
+                {
+                    complexFFTIn[index] = { fftIn.getReadPointer (0)[index], 0.0f };
+                    fftInErr += complexFFTIn[index].r - temp[index];
+                }*/
+
+                //complexForwardFFT.perform (complexFFTIn.getData(), complexFFTOut.getData());
+                
+                //getConjugateComplexMultiplicationInPlace (complexFFTOut.getData(), fftIn.getNumSamples());
+                //complexInverseFFT.perform (complexFFTOut.getData(), complexFFTAutoCorrelation.getData());
+                //analyseAutoCorrelation (complexFFTAutoCorrelation.getData(), fftIn.getNumSamples());
+
+                fft.performFrequencyOnlyForwardTransform (temp);
+
+                auto fftOutErr = 0.0f;
+                //for (int i = 0; i < numFFTInputSamples; i++)
+                //{
+                //    fftOutErr += complexFFTOut[i].r - temp[i];
+                //}
+                DBG("FFT In Error: "<< fftInErr << " | FFT Out error: " << fftOutErr);
+                //========================================================================
+            }
             
             for (int channel = 0; channel < numChannels; channel++)
             {
-                auto floatIn = (const float*) fftIn.getReadPointer(channel);
-                auto bytes = size_t (numFFTInputSamples) * sizeof(float);
-                memcpy((void*)temp, (void*)floatIn, bytes);
-                fft.performFrequencyOnlyForwardTransform (temp);
-                
-                auto floatOut = (float*) fftOut.getWritePointer(channel);
-                memcpy((void*)floatOut, (void*)temp, bytes / 2 + sizeof(float)); // We have half as many amplitudes.
-                
-                if (analyseSpectralCharacteristics)
-                {
-                    SpectralCharacteristics characteristics = calculateSpectralCharacteristics (fftOut, channel);
-                    features.setFeatureSample (ConcatenatedFeatureBuffer::Feature::Centroid, frame, characteristics.centroid, channel);
-                    features.setFeatureSample (ConcatenatedFeatureBuffer::Feature::Spread, frame, characteristics.spread, channel);
-                    features.setFeatureSample (ConcatenatedFeatureBuffer::Feature::Flatness, frame, characteristics.flatness, channel);
-                    features.setFeatureSample (ConcatenatedFeatureBuffer::Feature::Flux, frame, characteristics.flux, channel);
-                    float slope = calculateNormalisedSpectralSlope (fftOut, channel);
-                    features.setFeatureSample (ConcatenatedFeatureBuffer::Feature::Slope, frame, slope, channel);
-                    features.setFFTBinsForSample (fftOut.getReadPointer (channel), channel, frame);
-                }
-                if (analyseHarmonicCharacteristics)
-                {
-                    HarmonicCharacteristics characteristics = calculateHarmonicCharacteristics (fftOut, channel);
-                    features.setFeatureSample (ConcatenatedFeatureBuffer::Feature::F0, frame, characteristics.f0, channel);
-                    features.setFeatureSample (ConcatenatedFeatureBuffer::Feature::HER, frame, characteristics.harmonicEnergyRatio, channel);
-                    features.setFeatureSample (ConcatenatedFeatureBuffer::Feature::Inharmonicity, frame, characteristics.inharmonicity, channel);
-                }
+                //auto floatIn = (const float*) fftIn.getReadPointer(channel);
+                //auto bytes = size_t (numFFTInputSamples) * sizeof(float);
+                //memcpy((void*)temp, (void*)floatIn, bytes);
+                //fft.performFrequencyOnlyForwardTransform (temp);
+                //
+                //auto floatOut = (float*) fftOut.getWritePointer(channel);
+                //memcpy((void*)floatOut, (void*)temp, bytes / 2 + sizeof(float)); // We have half as many amplitudes.
+                //
+                //if (analyseSpectralCharacteristics)
+                //{
+                //    SpectralCharacteristics characteristics = calculateSpectralCharacteristics (fftOut, channel);
+                //    features.setFeatureSample (ConcatenatedFeatureBuffer::Feature::Centroid, frame, characteristics.centroid, channel);
+                //    features.setFeatureSample (ConcatenatedFeatureBuffer::Feature::Spread, frame, characteristics.spread, channel);
+                //    features.setFeatureSample (ConcatenatedFeatureBuffer::Feature::Flatness, frame, characteristics.flatness, channel);
+                //    features.setFeatureSample (ConcatenatedFeatureBuffer::Feature::Flux, frame, characteristics.flux, channel);
+                //    float slope = calculateNormalisedSpectralSlope (fftOut, channel);
+                //    features.setFeatureSample (ConcatenatedFeatureBuffer::Feature::Slope, frame, slope, channel);
+                //    features.setFFTBinsForSample (fftOut.getReadPointer (channel), channel, frame);
+                //}
+                //if (analyseHarmonicCharacteristics)
+                //{
+                //    HarmonicCharacteristics characteristics = calculateHarmonicCharacteristics (fftOut, channel);
+                //    features.setFeatureSample (ConcatenatedFeatureBuffer::Feature::F0, frame, characteristics.f0, channel);
+                //    features.setFeatureSample (ConcatenatedFeatureBuffer::Feature::HER, frame, characteristics.harmonicEnergyRatio, channel);
+                //    features.setFeatureSample (ConcatenatedFeatureBuffer::Feature::Inharmonicity, frame, characteristics.inharmonicity, channel);
+                //}
             }
             /* maybe use RMS for energy envelope? Or just multiply each total by a gain factor?*/
             features.energyEnvelope.setSample (0, frame, sumAccrossChannels (fftOut));
         }
     }
-    
+
     HarmonicCharacteristics calculateHarmonicCharacteristics (AudioSampleBuffer& fftResults, int channel)
     {
         std::vector<int> peakBins;
@@ -218,7 +258,8 @@ struct AudioAnalyser
         std::vector<F0Candidate> frequencyHistogram;
         frequencyHistogram.clear();
 
-        size_t numBins = (size_t) fftResults.getNumSamples();
+        size_t numBins = (size_t) fftResults.getNumSamples();// /2 /2
+
         //calculate mean bin magnitude and maximum bin magnitude
         double meanMagnitude = 0.0;
         double magnitudeSum = 0.0;
@@ -255,7 +296,6 @@ struct AudioAnalyser
             }
         }
         previousF0 = f0.frequency;
-        DBG("F0Estimate: "<<f0.frequency);
         double inharmonicity = 0.0;
 
         if (f0.frequency > 0.0)
@@ -581,6 +621,49 @@ struct AudioAnalyser
         features.estimatedLogAttackTime = (float) (log10 ((double)(float)(i * samplesPerStep) * (float)msPerSample));
     }
     
+    static void getConjugateComplexMultiplicationInPlace (FFT::Complex* data, int numItems)
+    {
+        for (int index = 0; index < numItems; index++)
+        {
+            const FFT::Complex item = data[index];
+            const FFT::Complex complexConjugate = { item.r, -item.i }; 
+            const float newReal = (item.r * complexConjugate.r) - (item.i * complexConjugate.i);
+            const float newIm   = (item.r * complexConjugate.i) + (complexConjugate.r * item.i);
+            data[index] = { newReal, newIm };
+        }
+    }
+
+    void analyseAutoCorrelation (FFT::Complex* data, int numItems)
+    {
+        HeapBlock<float> autoCorrelation (numItems);
+        for (int i = 0; i < numItems; i++)
+            autoCorrelation[i] = data[i].r;
+        
+        int peakBin = getMaxIndex (autoCorrelation.getData(), numItems);
+
+        double frequencyRangePerBin = nyquist / (double) numItems;
+
+        double midFreqOfMaxBin = (peakBin * frequencyRangePerBin) + (frequencyRangePerBin / 2.0);
+        DBG ("Frequency estimation: "<<midFreqOfMaxBin);
+    }
+
+    static int getMaxIndex (float* data, int numItems)
+    {
+        int indexOfMax = 0;
+        float currentMax = data[0];
+
+        for (int i = 0; i < numItems; i++)
+        {
+            if (data[i] > currentMax)
+            {
+                indexOfMax = i;
+                currentMax = data[i];
+            }
+        }
+
+        return indexOfMax;
+    }
+
     static void scaleBufferWithBartlettWindowing (AudioSampleBuffer& source) // TODO: change to DSPMultiBlock
     {
         int numSamples = source.getNumSamples();
@@ -596,6 +679,11 @@ struct AudioAnalyser
     {
         fftIn.setSize  (fftIn.getNumChannels(),  samplesPerWindow);
         fftOut.setSize (fftOut.getNumChannels(), samplesPerWindow / 2 + 1);
+
+        //fftAutoCorrelationData.allocate (samplesPerWindow, true);
+        //complexFFTIn.allocate              (samplesPerWindow, true);
+        //complexFFTOut.allocate             (samplesPerWindow, true);
+        //complexFFTAutoCorrelation.allocate (samplesPerWindow, true);
     }
 
     double              nyquist;
@@ -603,6 +691,12 @@ struct AudioAnalyser
     AudioSampleBuffer   fftIn;
     AudioSampleBuffer   fftOut;
     FFT                 fft;
+    FFT                 complexForwardFFT;
+    FFT                 complexInverseFFT;
+    //HeapBlock<FFT::Complex> complexFFTIn;
+    //HeapBlock<FFT::Complex> complexFFTOut;
+    //HeapBlock<FFT::Complex> complexFFTAutoCorrelation;
+    //HeapBlock<float>    fftAutoCorrelationData;
     std::vector<double> previousBinMagnitudes;
     bool                analyseSpectralCharacteristics;
     bool                analyseHarmonicCharacteristics;

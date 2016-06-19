@@ -15,97 +15,43 @@
 /*
     Application for linking up audio device manager with different GUI elements
 */
-class MainContentComponent   : public AudioAppComponent
+class MainContentComponent   : public  AudioAppComponent,
+                               private ChangeListener,
+                               public ListBoxModel
 {
 public:
     //==============================================================================
     MainContentComponent() 
-    :   audioAnalyser    (audioDataCollector), 
-        oscFeatureSender (audioAnalyser)
+    
     {
+        setLookAndFeel (lookAndFeel);
         setSize (800, 600);
         // specify the number of input and output channels that we want to open
         setAudioChannels  (2, 2);
-        addAndMakeVisible (view);
         
+        deviceManager.addChangeListener (this);
+        
+        setAudioSettingsDeviceManager (deviceManager);
         //deviceManager.addAudioCallback (&view.getAudioDisplayComponent());
-        audioDataCollector.setSpectralBufferUpdatedCallback ([this] (AudioSampleBuffer& b) 
-                                                             {
-                                                                 view.getAudioDisplayComponent().pushBuffer (b);
-                                                             });
+        view.setTracksModel (this);
+        addAndMakeVisible (view);
 
-        oscFeatureSender.onsetDetectedCallback = ([this] () 
-                                                 {
-                                                     view.featureTriggered (OSCFeatureAnalysisOutput::OSCFeatureType::Onset);
-                                                 });
+        updateAnalysisTracksFromDeviceManager (&deviceManager);
 
-        deviceManager.addAudioCallback (&audioDataCollector);
         
-
-        audioFilePlayer.setupAudioCallback (deviceManager);
-
-        view.setFeatureValueQueryCallback ([this] (OSCFeatureAnalysisOutput::OSCFeatureType oscf, float maxValue) 
-                                                   { 
-                                                       if ( ! OSCFeatureAnalysisOutput::isTriggerFeature (oscf))
-                                                           return oscFeatureSender.getRunningAverage (oscf) / maxValue; 
-                                                   });
-
-        //switches between listening to input or output
-        view.setAudioSourceTypeChangedCallback ([this] (eAudioSourceType type) 
-                                                        { 
-                                                            bool input = type == eAudioSourceType::enIncomingAudio;
-                                                           
-                                                            if (input)
-                                                                audioFilePlayer.stop();
-                                                            
-                                                            audioDataCollector.toggleCollectInput (input);
-                                                            view.toggleShowTransportControls (type == eAudioSourceType::enAudioFile);
-                                                            view.clearAudioDisplayData();
-                                                        }
-                                                );
-
-        view.setChannelTypeChangedCallback ([this] (eChannelType t) { audioDataCollector.setChannelToCollect ((int) t); });
-        
-        view.setFileDroppedCallback ([this] (File& f) 
-                                    { 
-                                        audioDataCollector.clearBuffer();
-                                        view.clearAudioDisplayData();
-                                        audioFilePlayer.loadFileIntoTransport (f); 
-
-                                        if (audioFilePlayer.hasFile())
-                                            view.setAudioTransportState (AudioFileTransportController::eAudioTransportState::enFileStopped);
-                                        else
-                                            view.setAudioTransportState (AudioFileTransportController::eAudioTransportState::enNoFileSelected);
-                                    } );
-
-        view.setOnsetSensitivityCallback   ([this] (float s)                              { oscFeatureSender.setOnsetDetectionSensitivity (s); });
-        view.setOnsetWindowSizeCallback    ([this] (int s)                                { oscFeatureSender.setOnsetWindowLength (s); });
-        view.setOnsetDetectionTypeCallback ([this] (OnsetDetector::eOnsetDetectionType t) { oscFeatureSender.setOnsetDetectionType (t); });
-        view.setPlayPressedCallback        ([this] ()                                     { audioFilePlayer.play(); audioDataCollector.clearBuffer(); });
-        view.setPausePressedCallback       ([this] ()                                     { audioFilePlayer.pause(); audioDataCollector.clearBuffer(); });
-        view.setStopPressedCallback        ([this] ()                                     { audioFilePlayer.stop(); audioDataCollector.clearBuffer(); });
-        view.setRestartPressedCallback     ([this] ()                                     { audioFilePlayer.restart(); });
-
-        view.setAddressChangedCallback       ([this] (String address) { return oscFeatureSender.connectToAddress (address); });
-        view.setBundleAddressChangedCallback ([this] (String address) 
-        { 
-            oscFeatureSender.bundleAddress = address; });
-        view.setAudioSettingsDeviceManager   (deviceManager);
-        view.setDisplayedOSCAddress          (oscFeatureSender.address);
-        view.setDisplayedBundleAddress       (oscFeatureSender.bundleAddress);
     }
 
     ~MainContentComponent()
     {
+        deviceManager.removeChangeListener (this);
         shutdownAudio();
     }
 
     //=======================================================================
     void prepareToPlay (int samplesPerBlockExpected, double sampleRate) override
     {
-        view.getAudioDisplayComponent().setSamplesPerBlock (samplesPerBlockExpected);
-        audioAnalyser.sampleRateChanged (sampleRate);
-        audioDataCollector.setExpectedSamplesPerBlock (samplesPerBlockExpected);
+        for (const auto track : analyserControllers)
+            track->prepareToPlay (samplesPerBlockExpected, sampleRate);
     }
 
     void getNextAudioBlock (const AudioSourceChannelInfo& bufferToFill) override
@@ -134,16 +80,153 @@ public:
 
     void resized() override
     {
-        view.setBounds (getLocalBounds());
+        auto& localBounds = getLocalBounds();
+        const auto deviceSettingsHeight = audioDeviceSelector != nullptr ? audioDeviceSelector->getRequiredHeight() : 0;
+        auto& selectorBounds = localBounds.removeFromTop (deviceSettingsHeight);
+        const auto channelSelectorWidth = selectorBounds.getWidth() / 2;
+        const auto& channelSelectorBounds = selectorBounds.removeFromLeft (channelSelectorWidth);
+
+        if (channelSelector != nullptr)
+            channelSelector->setBounds (channelSelectorBounds);
+        if (audioDeviceSelector != nullptr)
+            audioDeviceSelector->setBounds (selectorBounds);
+
+        view.setBounds (localBounds);
     }
 
+    void changeListenerCallback (ChangeBroadcaster* broadcaster) override
+    {
+        juce::AudioDeviceManager* adm = dynamic_cast<juce::AudioDeviceManager*>(broadcaster);
+
+        if (adm != nullptr)
+            updateAnalysisTracksFromDeviceManager (adm);
+        else
+            jassertfalse;
+    }
+
+    //=======================================================================
+
+    void setAudioSettingsDeviceManager (AudioDeviceManager& deviceManager)
+    {
+        const int minInputChannels              = 0;
+        const int maxInputChannels              = 8;
+        const int minOutputchannels             = 0;
+        const int maxOutputchannels             = 0;
+        const bool showMidiIn                   = false;
+        const bool showMidiOut                  = false;
+        const bool presentChannelsAsStereoPairs = false;
+        
+        std::function<void()> clearAllTracksCallback = [this]()
+        {
+            clearAllTracks();
+        };
+
+        addAndMakeVisible (audioDeviceSelector = new CustomAudioDeviceSelectorComponent (deviceManager, 
+                                                                                         minInputChannels, maxInputChannels, 
+                                                                                         minOutputchannels, maxOutputchannels, showMidiIn, showMidiOut, 
+                                                                                         presentChannelsAsStereoPairs, clearAllTracksCallback));
+        addAndMakeVisible (channelSelector = new ChannelSelectorPanel (audioDeviceSelector->getDeviceSetupDetails()));
+        
+        channelSelector->setChannelsConfigAboutToChangeCallback (clearAllTracksCallback);
+
+        resized();
+    }
+
+    //=======================================================================
+
+    void updateAnalysisTracksFromDeviceManager (AudioDeviceManager* dm)
+    {
+        clearAllTracks();
+
+        const auto currentDevice = dm->getCurrentAudioDevice();
+        if (currentDevice != nullptr)
+        {
+            const auto channelNames = currentDevice->getInputChannelNames();
+            const auto numInputs = channelNames.size();
+            const auto activeInputs  = currentDevice->getActiveInputChannels();
+            const auto numActiveChannels = activeInputs.countNumberOfSetBits();
+
+            auto activeInputBitNumber = activeInputs.findNextSetBit(0);
+            auto inputChannel = 0;
+            for (auto input = 0; input < numInputs; ++input)
+            {
+                String channelName = channelNames[input];
+                if (activeInputBitNumber == input)
+                {
+                    addAnalyserTrack (inputChannel, channelName);
+                    inputChannel ++;
+                    activeInputBitNumber = activeInputs.findNextSetBit (activeInputBitNumber + 1);
+                }
+                else
+                {
+                    addDisabledAnalyserTrack (channelName);
+                }
+            }
+
+            view.updateTracks();
+        }
+        
+        resized();
+    }
+
+    void addAnalyserTrack (int channelToAnalyse, String channelName)
+    {
+        analyserControllers.add (new AnalyserTrackController (deviceManager, channelToAnalyse, channelName));
+    }
+
+    void addDisabledAnalyserTrack (String channelName)
+    {
+        analyserControllers.add (new AnalyserTrackController (deviceManager, -1, channelName));
+    }
+
+    void clearAllTracks()
+    {
+        for (const auto track : analyserControllers)
+            track->stopAnalysis();
+
+        analyserControllers.clear();
+        view.updateTracks();
+    }
+    //=======================================================================
+
+    int getNumRows() override 
+    { 
+        return analyserControllers.size();
+    }
+
+    void paintListBoxItem (int rowNumber, Graphics& g, int width, int height, bool rowIsSelected) override
+    {
+        g.fillAll (FeatureExtractorLookAndFeel::getBackgroundColour());
+    }
+
+    Component* refreshComponentForRow (int rowNumber, bool /*isRowSelected*/,
+                                               Component* existingComponentToUpdate) override
+    {
+        
+        if (rowNumber < analyserControllers.size())
+        {
+            const auto analyserController = analyserControllers.getUnchecked (rowNumber);
+            analyserController->clearGUICallbacks();
+            delete existingComponentToUpdate;
+            auto newTrack = new AnalyserTrack (analyserController->getChannelName());
+            if (analyserController->isEnabled())
+                analyserController->linkGUIDisplayToTrack (newTrack, audioDeviceSelector->getDeviceSetupDetails());
+
+            return newTrack;
+        }
+        else
+        {
+            delete existingComponentToUpdate;
+            return nullptr;
+        }
+    }
 private:
     SharedResourcePointer<FeatureExtractorLookAndFeel> lookAndFeel;
-    MainView                 view;
-    AudioFilePlayer          audioFilePlayer;
-    AudioDataCollector       audioDataCollector;
-    RealTimeAnalyser         audioAnalyser;
-    OSCFeatureAnalysisOutput oscFeatureSender;
+    ScopedPointer<ChannelSelectorPanel>                channelSelector;
+    ScopedPointer<CustomAudioDeviceSelectorComponent>  audioDeviceSelector;
+    OwnedArray<AnalyserTrackController>                analyserControllers;
+    MainView                                           view;
+    
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainContentComponent)
 };

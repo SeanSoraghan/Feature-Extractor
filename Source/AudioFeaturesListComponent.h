@@ -16,26 +16,26 @@ class FeatureListModel
 public:
     FeatureListModel() {}
 
-    void addFeature (OSCFeatureAnalysisOutput::OSCFeatureType f)
+    void addFeature (AudioFeatures::eAudioFeature f)
     {
         visualisedFeatures.add (f);
     }
 
-    Array<OSCFeatureAnalysisOutput::OSCFeatureType>& getFeaturesToVisualise()
+    Array<AudioFeatures::eAudioFeature>& getFeaturesToVisualise()
     {
         return visualisedFeatures;
     }
 
-    static bool isTriggerFeature (OSCFeatureAnalysisOutput::OSCFeatureType f)
+    static bool isTriggerFeature (AudioFeatures::eAudioFeature f)
     {
-        if (f == OSCFeatureAnalysisOutput::OSCFeatureType::Onset)
+        if (f == AudioFeatures::eAudioFeature::enOnset)
             return true;
 
         return false;
     }
 
 private:
-    Array<OSCFeatureAnalysisOutput::OSCFeatureType> visualisedFeatures;
+    Array<AudioFeatures::eAudioFeature> visualisedFeatures;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FeatureListModel)
 };
@@ -47,9 +47,9 @@ private:
 class FeatureVisualiser : public Component
 {
 public:
-    FeatureVisualiser (OSCFeatureAnalysisOutput::OSCFeatureType f, float maxV = 1.0f) 
+    FeatureVisualiser (AudioFeatures::eAudioFeature f) 
     :   featureType (f),
-        maxValue    (maxV)
+        maxValue    (AudioFeatures::getMaxValueForFeature (f))
     {}
 
     void paint (Graphics& g) override 
@@ -61,7 +61,7 @@ public:
                                                                             localBounds.getHeight());
         FeatureExtractorLookAndFeel::paintFeatureVisualiser (g, value, visualiserBounds);
         g.setColour (Colours::white);
-        g.drawText  (OSCFeatureAnalysisOutput::getOSCFeatureName (featureType), textBounds, Justification::centred);
+        g.drawText  (AudioFeatures::getFeatureName (featureType), textBounds, Justification::centred);
     }
 
     void setValue (float v) noexcept 
@@ -71,7 +71,7 @@ public:
         MessageManager::getInstance()->callAsync ([this](){ repaint(); });
     }
 
-    OSCFeatureAnalysisOutput::OSCFeatureType featureType;
+    AudioFeatures::eAudioFeature featureType;
     float value    { 0.0f };
     float maxValue { 1.0f };
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FeatureVisualiser)
@@ -83,7 +83,7 @@ class TriggerFeatureVisualiser :    private Timer,
                                     public  Component
 {
 public:
-    TriggerFeatureVisualiser (OSCFeatureAnalysisOutput::OSCFeatureType f) 
+    TriggerFeatureVisualiser (AudioFeatures::eAudioFeature f) 
     :   featureType (f) 
     {}
 
@@ -109,7 +109,7 @@ public:
         FeatureExtractorLookAndFeel::paintTriggerFeatureVisualiser (g, visualiserBounds, opacity);
         
         g.setColour (Colours::white);
-        g.drawText  (OSCFeatureAnalysisOutput::getOSCFeatureName (featureType), textBounds, Justification::centred);
+        g.drawText  (AudioFeatures::getFeatureName (featureType), textBounds, Justification::centred);
     }
 
     void featureTriggered() noexcept 
@@ -118,7 +118,7 @@ public:
         startTimerHz (FeatureExtractorLookAndFeel::getAnimationRateHz());
     }
 
-    OSCFeatureAnalysisOutput::OSCFeatureType featureType;
+    AudioFeatures::eAudioFeature featureType;
 private:
     float opacity  { 0.0f };
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TriggerFeatureVisualiser)
@@ -130,7 +130,7 @@ private:
                             public ComboBoxListener
 {
 public:
-    TriggerFeatureView (OSCFeatureAnalysisOutput::OSCFeatureType f) 
+    TriggerFeatureView (AudioFeatures::eAudioFeature f) 
     :   visualiser        (f),
         sensitivityLabel  ("Sensitivity", "Sensitivity"),
         windowLengthLabel ("Window Length", "Window Length"),
@@ -214,7 +214,7 @@ public:
     
     void featureTriggered() { visualiser.featureTriggered(); }
 
-    OSCFeatureAnalysisOutput::OSCFeatureType getFeatureType() { return visualiser.featureType; }
+    AudioFeatures::eAudioFeature getFeatureType() { return visualiser.featureType; }
 
     void setSensitivityChangedCallback (std::function<void (float)> f)                              { sensitivityChanged  = f; }
     void setWindowLengthCallback       (std::function<void (int)> f)                                { windowLengthChanged = f; }
@@ -254,8 +254,6 @@ public:
         {
             if (FeatureListModel::isTriggerFeature (feature))
                 addAndMakeVisible (triggerFeatureViews.add (new TriggerFeatureView (feature)));
-            else if (feature == OSCFeatureAnalysisOutput::OSCFeatureType::F0)
-                addAndMakeVisible (featureVisualisers.add (new FeatureVisualiser (feature, (7902.13f/* B8 */ - 16.35f/* C0 */))));
             else
                 addAndMakeVisible (featureVisualisers.add (new FeatureVisualiser (feature)));
         }
@@ -286,14 +284,14 @@ public:
                 featureVisualiser->setBounds (localBounds.removeFromLeft (visualiserWidth));
     }
     
-    void featureTriggered (OSCFeatureAnalysisOutput::OSCFeatureType triggerType)
+    void featureTriggered (AudioFeatures::eAudioFeature triggerType)
     {
         for (auto triggerFeatureView : triggerFeatureViews)
             if (triggerFeatureView->getFeatureType() == triggerType)
                 triggerFeatureView->featureTriggered();
     }
 
-    void setFeatureValueQueryCallback (std::function <float (OSCFeatureAnalysisOutput::OSCFeatureType, float)> f) 
+    void setFeatureValueQueryCallback (std::function <float (AudioFeatures::eAudioFeature, float)> f) 
     { 
         getLatestFeatureValue = f; 
     }
@@ -320,10 +318,10 @@ public:
     }
 
 private:
-    OwnedArray<FeatureVisualiser>                                                   featureVisualisers;
-    OwnedArray<TriggerFeatureView>                                                  triggerFeatureViews;
-    std::function<float (OSCFeatureAnalysisOutput::OSCFeatureType, float maxValue)> getLatestFeatureValue;
-    FeatureListModel& model;
+    OwnedArray<FeatureVisualiser>                                       featureVisualisers;
+    OwnedArray<TriggerFeatureView>                                      triggerFeatureViews;
+    std::function<float (AudioFeatures::eAudioFeature, float maxValue)> getLatestFeatureValue;
+    FeatureListModel&                                                   model;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FeatureListView)
 };

@@ -22,6 +22,11 @@ public:
     static float  getAudioDisplayHeightRatio()               noexcept { return 0.2f; }
     static float  getFeatureVisualiserComponentHeightRatio() noexcept { return 0.4f; }
     static float  getSettingsHeightRatio()                   noexcept { return 0.4f; }
+    static float  getDeviceSettingsComboBoxWidthRatio()      noexcept { return 0.6f; }
+    static int    getMaxDeviceSettingsListBoxHeight()        noexcept { return 100; }
+    static int    getDeviceSettingsItemHeight()              noexcept { return 24; }
+    static int    getInnerComponentSpacing()                 noexcept { return 6; }
+    static int    getComponentInset()                        noexcept { return 7; }
     static int    getFeatureVisualiserTextHeight()           noexcept { return 10; }
     static int    getFeatureVisualiserGraphicWidth()         noexcept { return 2; }
     static int    getTriggerFeatureVisualiserSquareSize()    noexcept { return 15; } 
@@ -36,12 +41,18 @@ public:
     static int    getHorizontalMargin()                      noexcept { return 30; }
     static int    getAnimationRateHz ()                      noexcept { return 60; }
     static int    getSliderHeight()                          noexcept { return 20; }
+    static int    getAnalyserTrackHeight()                   noexcept { return 200; }
     static float  getCornerSize()                            noexcept { return 4.0f; }
     static float  getLineThickness()                         noexcept { return 1.0f; }
     static Colour getTextColour()                            noexcept { return Colours::white; }
     static Colour getControlBackgroundColour()               noexcept { return Colours::green; }
-    static Colour getTextEditorBackgroundColour()            noexcept { return Colours::lightgreen; }
+    static Colour getForegroundInteractiveColour()           noexcept { return Colours::lightgreen; }
+    static Colour getBackgroundColour()                      noexcept { return Colours::black; }
+    static Colour getSelectedColour()                        noexcept { return Colours::green; }
+    static Colour getUnselectedColour()                      noexcept { return Colours::grey; }
     static Colour getAudioTransportButtonForegroundColour()  noexcept { return Colours::black; }
+    static Colour getBufferBackgroundColour()                noexcept { return Colours::black; }
+    static Colour getBufferForegroundColour()                noexcept { return Colours::white; }
 
     static void paintFeatureVisualiser (Graphics& g, float value, Rectangle<int> visualiserBounds)
     {
@@ -286,10 +297,132 @@ public:
 
     void fillTextEditorBackground (Graphics& g, int /*width*/, int /*height*/, TextEditor& textEditor)
     {
-        g.setColour (getTextEditorBackgroundColour());
+        g.setColour (getForegroundInteractiveColour());
         g.fillRoundedRectangle (textEditor.getLocalBounds().toFloat(), getCornerSize());
     }
 
+    void drawScrollbar (Graphics& g, ScrollBar& scrollbar, int x, int y, int width, int height,
+                        bool isScrollbarVertical, int thumbStartPosition, int thumbSize, bool isMouseOver, bool isMouseDown)
+    {
+        g.fillAll   (FeatureExtractorLookAndFeel::getBackgroundColour());
+        g.setColour (FeatureExtractorLookAndFeel::getControlBackgroundColour());
+        g.fillRoundedRectangle (scrollbar.getLocalBounds().toFloat(), FeatureExtractorLookAndFeel::getCornerSize());
+        Path thumbPath;
+
+        if (thumbSize > 0)
+        {
+            const float thumbIndent = (isScrollbarVertical ? width : height) * 0.25f;
+            const float thumbIndentx2 = thumbIndent * 2.0f;
+
+            if (isScrollbarVertical)
+                thumbPath.addRoundedRectangle (x + thumbIndent, thumbStartPosition + thumbIndent,
+                                               width - thumbIndentx2, thumbSize - thumbIndentx2, (width - thumbIndentx2) * 0.5f);
+            else
+                thumbPath.addRoundedRectangle (thumbStartPosition + thumbIndent, y + thumbIndent,
+                                               thumbSize - thumbIndentx2, height - thumbIndentx2, (height - thumbIndentx2) * 0.5f);
+        }
+
+        Colour thumbCol (FeatureExtractorLookAndFeel::getForegroundInteractiveColour());
+
+        if (isMouseOver || isMouseDown)
+            thumbCol = thumbCol.withMultipliedAlpha (2.0f);
+
+        g.setColour (thumbCol);
+        g.fillPath (thumbPath);
+
+        g.setColour (thumbCol.contrasting ((isMouseOver  || isMouseDown) ? 0.2f : 0.1f));
+        g.strokePath (thumbPath, PathStrokeType (1.0f));
+    }
+
+    void drawTickBox (Graphics& g, Component& /*component*/,
+                      float x, float y, float w, float h,
+                      const bool ticked,
+                      const bool /*isEnabled*/,
+                      const bool /*isMouseOverButton*/,
+                      const bool /*isButtonDown*/)
+    {
+        g.setColour (ticked ? getSelectedColour() : getUnselectedColour());
+        if (ticked)
+            g.fillEllipse (x, y, w, h);
+        else
+            g.drawEllipse (x, y, w, h, getLineThickness());
+    }
+
+    //================================================================================
+    // Buffer drawing functions
+    //================================================================================
+
+    static void drawBuffer (Graphics& g, Rectangle<float> bounds, AudioSampleBuffer buffer)
+    {
+        const int numChannels = buffer.getNumChannels();
+        const int numSamplesToDraw = buffer.getNumSamples();
+        const int startSampleToDraw = 0;
+        jassert (numSamplesToDraw <= buffer.getNumSamples() && startSampleToDraw + numSamplesToDraw <= buffer.getNumSamples());
+
+        g.setColour (FeatureExtractorLookAndFeel::getBufferBackgroundColour());
+        g.fillRect  (bounds);
+
+        const auto channelHeight   = bounds.getHeight() / numChannels;
+        const auto binWidth        = bounds.getWidth()  / (float) numSamplesToDraw;
+        const auto visualAmplifier = 1.0f;
+        RectangleList<float> bins;
+        for (int channel = 0; channel < numChannels; channel++)
+        {
+            auto channelBounds = bounds.removeFromTop (channelHeight);
+            
+            for (int s = startSampleToDraw; s < numSamplesToDraw; s++)
+            {
+                const auto sampleValue = buffer.getSample (channel, s) * visualAmplifier; 
+                const auto binBounds    = channelBounds.removeFromLeft (binWidth).removeFromBottom (sampleValue * channelHeight); 
+                bins.add (binBounds);
+            }
+        }
+        g.setColour (FeatureExtractorLookAndFeel::getBufferForegroundColour());
+        g.fillRectList (bins);
+    }
+
+    static void drawBipolarBuffer (Graphics& g, Rectangle<float> bounds, AudioSampleBuffer buffer)
+    {
+        const int numChannels = buffer.getNumChannels();
+        const int numSamplesToDraw = buffer.getNumSamples();
+        const int startSampleToDraw = 0;
+        jassert (numSamplesToDraw  <= buffer.getNumSamples() && startSampleToDraw + numSamplesToDraw <= buffer.getNumSamples());
+
+        g.setColour (FeatureExtractorLookAndFeel::getBufferBackgroundColour());
+        g.fillRect  (bounds);
+
+        const auto channelHeight   = bounds.getHeight() / numChannels;
+        const auto binWidth        = bounds.getWidth() / (float) numSamplesToDraw;
+        const auto visualAmplifier = 1.0f;
+        RectangleList<float> samples;
+        for (int channel = 0; channel < numChannels; channel++)
+        {
+            auto channelBounds = bounds.removeFromTop (channelHeight);
+
+            for (int s = startSampleToDraw; s < numSamplesToDraw; s++)
+            {
+                auto sampleBounds = channelBounds.removeFromLeft (binWidth);
+                const auto sampleValue = buffer.getSample (channel, s) * visualAmplifier; 
+
+                if (sampleValue >= 0.0f)
+                    samples.add (sampleBounds.removeFromTop (channelHeight / 2.0f).removeFromBottom (sampleValue * channelHeight));
+                else
+                    samples.add (sampleBounds.removeFromBottom (channelHeight / 2.0f).removeFromTop ((float) (abs ((double) sampleValue)) * channelHeight));
+            }
+        }
+        g.setColour (FeatureExtractorLookAndFeel::getBufferForegroundColour());
+        g.fillRectList (samples);
+    }
+
+    static void drawPeakPoint (Graphics& g, Rectangle<float> bounds, Point<float> peakPoint)
+    {
+        const float peakX =      peakPoint.getX() * bounds.getWidth();
+        const float zeroLine =   bounds.getHeight() * 0.5f;
+        const float poleHeight = bounds.getHeight() * 0.5f;
+        const float peakY =      zeroLine - peakPoint.getY() * poleHeight;
+        g.setColour (Colours::red);
+        g.fillEllipse (peakX, peakY, 3.0f, 3.0f);
+    }
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FeatureExtractorLookAndFeel)
 };
 
