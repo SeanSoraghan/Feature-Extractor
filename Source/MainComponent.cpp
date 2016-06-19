@@ -16,7 +16,8 @@
     Application for linking up audio device manager with different GUI elements
 */
 class MainContentComponent   : public  AudioAppComponent,
-                               private ChangeListener
+                               private ChangeListener,
+                               public ListBoxModel
 {
 public:
     //==============================================================================
@@ -32,6 +33,7 @@ public:
         
         setAudioSettingsDeviceManager (deviceManager);
         //deviceManager.addAudioCallback (&view.getAudioDisplayComponent());
+        view.setTracksModel (this);
         addAndMakeVisible (view);
 
         updateAnalysisTracksFromDeviceManager (&deviceManager);
@@ -79,8 +81,8 @@ public:
     void resized() override
     {
         auto& localBounds = getLocalBounds();
-        const auto testH = (int) ((float) localBounds.getHeight() * 0.25f);
-        auto& selectorBounds = localBounds.removeFromTop (testH);
+        const auto deviceSettingsHeight = audioDeviceSelector != nullptr ? audioDeviceSelector->getRequiredHeight() : 0;
+        auto& selectorBounds = localBounds.removeFromTop (deviceSettingsHeight);
         const auto channelSelectorWidth = selectorBounds.getWidth() / 2;
         const auto& channelSelectorBounds = selectorBounds.removeFromLeft (channelSelectorWidth);
 
@@ -106,14 +108,13 @@ public:
 
     void setAudioSettingsDeviceManager (AudioDeviceManager& deviceManager)
     {
-        const int minInputChannels              = 1;
+        const int minInputChannels              = 0;
         const int maxInputChannels              = 8;
         const int minOutputchannels             = 0;
         const int maxOutputchannels             = 0;
         const bool showMidiIn                   = false;
         const bool showMidiOut                  = false;
         const bool presentChannelsAsStereoPairs = false;
-        const bool hideAdvancedSettings         = true;
         
         std::function<void()> clearAllTracksCallback = [this]()
         {
@@ -123,7 +124,7 @@ public:
         addAndMakeVisible (audioDeviceSelector = new CustomAudioDeviceSelectorComponent (deviceManager, 
                                                                                          minInputChannels, maxInputChannels, 
                                                                                          minOutputchannels, maxOutputchannels, showMidiIn, showMidiOut, 
-                                                                                         presentChannelsAsStereoPairs, hideAdvancedSettings, clearAllTracksCallback));
+                                                                                         presentChannelsAsStereoPairs, clearAllTracksCallback));
         addAndMakeVisible (channelSelector = new ChannelSelectorPanel (audioDeviceSelector->getDeviceSetupDetails()));
         
         channelSelector->setChannelsConfigAboutToChangeCallback (clearAllTracksCallback);
@@ -158,9 +159,11 @@ public:
                 }
                 else
                 {
-                    view.addDisabledAnalyserTrack (channelName);
+                    addDisabledAnalyserTrack (channelName);
                 }
             }
+
+            view.updateTracks();
         }
         
         resized();
@@ -168,8 +171,12 @@ public:
 
     void addAnalyserTrack (int channelToAnalyse, String channelName)
     {
-        analyserControllers.add (new AnalyserTrackController (deviceManager, channelToAnalyse));
-        view.addAnalyserTrack (*analyserControllers.getLast(), channelName, audioDeviceSelector->getDeviceSetupDetails());
+        analyserControllers.add (new AnalyserTrackController (deviceManager, channelToAnalyse, channelName));
+    }
+
+    void addDisabledAnalyserTrack (String channelName)
+    {
+        analyserControllers.add (new AnalyserTrackController (deviceManager, -1, channelName));
     }
 
     void clearAllTracks()
@@ -178,10 +185,41 @@ public:
             track->stopAnalysis();
 
         analyserControllers.clear();
-        view.clearAnalyserTracks();
+        view.updateTracks();
     }
     //=======================================================================
 
+    int getNumRows() override 
+    { 
+        return analyserControllers.size();
+    }
+
+    void paintListBoxItem (int rowNumber, Graphics& g, int width, int height, bool rowIsSelected) override
+    {
+        g.fillAll (FeatureExtractorLookAndFeel::getBackgroundColour());
+    }
+
+    Component* refreshComponentForRow (int rowNumber, bool /*isRowSelected*/,
+                                               Component* existingComponentToUpdate) override
+    {
+        
+        if (rowNumber < analyserControllers.size())
+        {
+            const auto analyserController = analyserControllers.getUnchecked (rowNumber);
+            analyserController->clearGUICallbacks();
+            delete existingComponentToUpdate;
+            auto newTrack = new AnalyserTrack (analyserController->getChannelName());
+            if (analyserController->isEnabled())
+                analyserController->linkGUIDisplayToTrack (newTrack, audioDeviceSelector->getDeviceSetupDetails());
+
+            return newTrack;
+        }
+        else
+        {
+            delete existingComponentToUpdate;
+            return nullptr;
+        }
+    }
 private:
     SharedResourcePointer<FeatureExtractorLookAndFeel> lookAndFeel;
     ScopedPointer<ChannelSelectorPanel>                channelSelector;

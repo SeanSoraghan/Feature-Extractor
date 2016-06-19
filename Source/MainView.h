@@ -20,47 +20,41 @@ class MainView : public Component
 public:
     MainView ()
     {
+        tracks.setColour (ListBox::ColourIds::backgroundColourId, FeatureExtractorLookAndFeel::getBackgroundColour());
         setLookAndFeel (SharedResourcePointer<FeatureExtractorLookAndFeel>());
+        addAndMakeVisible (tracks);
+        tracks.setRowHeight (FeatureExtractorLookAndFeel::getAnalyserTrackHeight());
     }
 
     ~MainView() {}
 
+    void paint (Graphics& g) override
+    {
+        g.fillAll (FeatureExtractorLookAndFeel::getBackgroundColour());
+    }
+
     void resized() override
     {
-        auto& localBounds = getLocalBounds();
-
-        const auto trackHeight = 400;
-
-        for (const auto& track : analysers)
-            track->setBounds (localBounds.removeFromTop (trackHeight));
+        tracks.setBounds (getLocalBounds());
     }
 
-    void addAnalyserTrack (AnalyserTrackController& controller, String channelName, CustomAudioDeviceSetupDetails& deviceSetupDetails)
-    {
-        addAndMakeVisible (analysers.add (new AnalyserTrack (channelName)));
-        controller.linkGUIDisplayToTrack (analysers.getLast(), deviceSetupDetails);
-        resized();
-    }
+    //void addAnalyserTrack (AnalyserTrackController& controller, String channelName, CustomAudioDeviceSetupDetails& deviceSetupDetails)
+    //{
+    //    addAndMakeVisible (analysers.add (new AnalyserTrack (channelName)));
+    //    controller.linkGUIDisplayToTrack (analysers.getLast(), deviceSetupDetails);
+    //    resized();
+    //}
 
-    void addDisabledAnalyserTrack (String channelName)
-    {
-        analysers.add (new AnalyserTrack (channelName));
-        analysers.getLast()->setEnabled (false);
-    }
+    //void addDisabledAnalyserTrack (String channelName)
+    //{
+    //    analysers.add (new AnalyserTrack (channelName));
+    //    analysers.getLast()->setEnabled (false);
+    //}
 
-    void clearAnalyserTracks()
-    {
-        analysers.clear();
-    }
-
-    OwnedArray<AnalyserTrack>& getAnalysers()
-    {
-        return analysers;
-    }
-
+    void setTracksModel (ListBoxModel* m) { tracks.setModel (m); }
+    void updateTracks()                   { tracks.updateContent(); }
 private:
-    
-    OwnedArray<AnalyserTrack>                         analysers;
+    ListBox                    tracks;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainView)
 };
 

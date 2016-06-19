@@ -12,11 +12,13 @@
 #define INCLUDE_H_INCLUDED
 
 #include "../JuceLibraryCode/JuceHeader.h"
+#include "FeatureExtractorLookAndFeel.h"
+
 #include "CustomChannelSelectorController.h"
 #include "CustomChannelSelectorPanel.h"
 #include "CustomAudioSettingsComponent.h"
 
-#include "FeatureExtractorLookAndFeel.h"
+
 
 #include "AudioFilePlayer.h"
 

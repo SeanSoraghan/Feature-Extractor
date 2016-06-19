@@ -38,7 +38,6 @@
 class CustomAudioDeviceSelectorComponent  : public Component,
                                             private ComboBoxListener, // (can't use ComboBox::Listener due to idiotic VC2005 bug)
                                             private ChangeListener,
-                                            private Button::Listener,
                                             private Timer
 {
 public:
@@ -69,7 +68,6 @@ public:
                                         bool showMidiInputOptions,
                                         bool showMidiOutputSelector,
                                         bool showChannelsAsStereoPairs,
-                                        bool hideAdvancedOptionsWithButton,
                                         std::function<void()> audioDeviceAboutToChangeCB);
 
     /** Destructor */
@@ -83,10 +81,17 @@ public:
 
     /** Returns the standard height used for items in the panel. */
     int getItemHeight() const noexcept      { return itemHeight; }
-
-    /** Returns the ListBox that's being used to show the midi inputs, or nullptr if there isn't one. */
-    ListBox* getMidiInputSelectorListBox() const noexcept;
     
+    int getRequiredHeight() const noexcept 
+    {
+        auto numBoxes = 1;
+        if (audioDeviceSettingsComp != nullptr)
+            numBoxes += audioDeviceSettingsComp->getNumChildComponents() / 2;//count only boxes (not labels)
+
+        return numBoxes * FeatureExtractorLookAndFeel::getDeviceSettingsItemHeight() 
+                        + (numBoxes + 1) * FeatureExtractorLookAndFeel::getInnerComponentSpacing();
+    }
+
     CustomAudioDeviceSetupDetails getDeviceSetupDetails();
     //==============================================================================
     /** @internal */
@@ -96,7 +101,6 @@ public:
 
 private:
     //==============================================================================
-    void buttonClicked (Button*) override;
 
     //==============================================================================
     std::function<void()> audioDeviceAboutToChangeCallback;
@@ -107,14 +111,6 @@ private:
     int itemHeight;
     const int minOutputChannels, maxOutputChannels, minInputChannels, maxInputChannels;
     const bool showChannelsAsStereoPairs;
-    const bool hideAdvancedOptionsWithButton;
-
-    class MidiInputSelectorComponentListBox;
-    friend struct ContainerDeletePolicy<MidiInputSelectorComponentListBox>;
-    ScopedPointer<MidiInputSelectorComponentListBox> midiInputsList;
-    ScopedPointer<ComboBox> midiOutputSelector;
-    ScopedPointer<Label> midiInputsLabel, midiOutputLabel;
-    ScopedPointer<TextButton> bluetoothButton;
 
     void comboBoxChanged (ComboBox*) override;
     void changeListenerCallback (ChangeBroadcaster*) override;

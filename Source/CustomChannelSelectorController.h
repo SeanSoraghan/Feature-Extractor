@@ -36,6 +36,8 @@ public:
           setup (setupDetails), type (boxType), 
           noItemsMessage (noItemsText)
     {
+        setLookAndFeel (SharedResourcePointer<FeatureExtractorLookAndFeel>());
+        setColour (ListBox::ColourIds::backgroundColourId, FeatureExtractorLookAndFeel::getForegroundInteractiveColour());
         refresh();
         setModel (this);
         setOutlineThickness (1);
@@ -83,10 +85,6 @@ public:
     {
         if (isPositiveAndBelow (row, items.size()))
         {
-            if (rowIsSelected)
-                g.fillAll (findColour (TextEditor::highlightColourId)
-                                .withMultipliedAlpha (0.3f));
-
             const String item (items [row]);
             bool enabled = false;
 
@@ -108,15 +106,18 @@ public:
                     enabled = config.outputChannels [row];
             }
 
-            const int x = getTickX();
-            const float tickW = height * 0.75f;
+            const int tickX = FeatureExtractorLookAndFeel::getInnerComponentSpacing();
+            const float tickW = FeatureExtractorLookAndFeel::getInnerComponentSpacing() * 2;
 
-            getLookAndFeel().drawTickBox (g, *this, x - tickW, (height - tickW) / 2, tickW, tickW,
+            getLookAndFeel().drawTickBox (g, *this, tickX, height / 2 - tickW / 2, tickW, tickW,
                                             enabled, true, true, false);
 
-            g.setFont (height * 0.6f);
+            //if (enabled)
+            //    g.fillAll (FeatureExtractorLookAndFeel::getSelectedColour());
+
+            g.setFont (FeatureExtractorLookAndFeel::getFeatureVisualiserTextHeight());
             g.setColour (findColour (ListBox::textColourId, true).withMultipliedAlpha (enabled ? 1.0f : 0.6f));
-            g.drawText (item, x, 0, width - x - 2, height, Justification::centredLeft, true);
+            g.drawText (item, tickX + tickW + FeatureExtractorLookAndFeel::getInnerComponentSpacing(), 0, width - tickX - 2, height, Justification::centredLeft, true);
         }
     }
 
@@ -125,8 +126,7 @@ public:
         channelConfigAboutToChange();
         selectRow (row);
 
-        if (e.x < getTickX())
-            flipEnablement (row);
+        flipEnablement (row);
     }
 
     void listBoxItemDoubleClicked (int row, const MouseEvent&) override
@@ -143,8 +143,8 @@ public:
 
     void paint (Graphics& g) override
     {
-        ListBox::paint (g);
-
+        g.setColour (findColour (backgroundColourId));
+        g.fillRoundedRectangle (getLocalBounds().toFloat(), FeatureExtractorLookAndFeel::getCornerSize());
         if (items.size() == 0)
         {
             g.setColour (Colours::grey);
@@ -265,11 +265,6 @@ private:
 
             chans.setBit (index, true);
         }
-    }
-
-    int getTickX() const
-    {
-        return getRowHeight() + 5;
     }
 
     void channelConfigAboutToChange()

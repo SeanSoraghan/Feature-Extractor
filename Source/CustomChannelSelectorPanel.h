@@ -39,10 +39,11 @@ private:
     void resized()
     {
         //const auto parent = getParentComponent();
-        const int maxListBoxHeight = 100;
-        const int h = 10;//parent->getItemHeight();
-        const int space = h / 4;
-        Rectangle<int> r (proportionOfWidth (0.35f), 0, proportionOfWidth (0.6f), 3000);
+        const int maxListBoxHeight = FeatureExtractorLookAndFeel::getMaxDeviceSettingsListBoxHeight();
+        const int h                = FeatureExtractorLookAndFeel::getDeviceSettingsItemHeight();//parent->getItemHeight();
+        const int space            = FeatureExtractorLookAndFeel::getInnerComponentSpacing();
+        Rectangle<int> r           = getLocalBounds().reduced (FeatureExtractorLookAndFeel::getComponentInset());//(proportionOfWidth (0.35f), 15, proportionOfWidth (0.6f), 3000);
+        
         if (outputChanList != nullptr)
         {
             outputChanList->setBounds (r.removeFromTop (outputChanList->getBestHeight (maxListBoxHeight)));

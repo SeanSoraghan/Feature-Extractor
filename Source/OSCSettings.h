@@ -28,13 +28,15 @@ public:
 
     void resized() override
     {
-        auto centralBounds = getLocalBounds().withSizeKeepingCentre (FeatureExtractorLookAndFeel::getOSCSettingsWidth(),
-                                                                     FeatureExtractorLookAndFeel::getOSCSettingsHeight());
-        int availableHeight = centralBounds.getHeight() - FeatureExtractorLookAndFeel::getVerticalMargin();
-        for (int i = 0; i < getNumChildComponents(); i++)
+        const int itemHeight = FeatureExtractorLookAndFeel::getDeviceSettingsItemHeight();
+        const int spacing    = FeatureExtractorLookAndFeel::getInnerComponentSpacing();
+        auto& b = getLocalBounds().reduced (FeatureExtractorLookAndFeel::getComponentInset());
+        for (int i = 0; i < getNumChildComponents(); ++i)
         {
-            getChildComponent (i)->setBounds (centralBounds.removeFromTop (availableHeight / 4));
+            getChildComponent (i)->setBounds (b.removeFromTop (itemHeight));
+            b.removeFromTop (spacing);
         }
+        //const int something  = b.getHeight() - 
     }
 
     TextEditor& getAddressEditor()
