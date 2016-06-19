@@ -33,15 +33,21 @@ RMS (Amplitude) - the root-mean-squared amplitude of the audio signal. This is t
 #Spectral
 
 Centroid - the spectral centroid of the signal. This can be a good indication of the 'brightness' of a sound.
+
 spectral Slope - the slope of the spectrum. Linearly dependent on the centroid.
+
 Spectral Spread - the spread of the spectrum around the mean. signals with narrow bandwidth will have smaller spectral spread.
+
 Spectral Flatness - good indication of the 'noisyness' of the signal (noisy tones have flatter spectrums).
+
 Spectral Flux - the level of change in spectral enery between consecutive frames.
 
 #Harmonic
 
 Pitch - a very crude estimation of the fundamental frequency. It is currently normalised between 0 and 5000 Hz
+
 Harmonic Energy Ratio - the proportion of the energy in the spectrum that is harmonic
+
 Inharmonicity - a measure of how much the peaks in the energy spectrum deviate from their closest harmonics
 
 
