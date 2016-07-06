@@ -65,8 +65,10 @@ public:
         }
     }
 
-    OSCFeatureAnalysisOutput (RealTimeAnalyser& rta)
-    :   realTimeAudioFeatures (rta)
+    OSCFeatureAnalysisOutput (RealTimeHarmonicAnalyser& rta, String ip, String bundle)
+    :   realTimeAudioFeatures (rta),
+        address (ip),
+        bundleAddress (bundle)
     {
         for (int f = 1; f < OSCFeatureType::NumFeatures; f++)
         {
@@ -75,7 +77,8 @@ public:
             else                                                            //Spectral
                 featureHistories.push_back (ValueHistory (5));
         }
-        connectToAddress (IPAddress::local().toString());
+        if (bundle != String::empty)
+            connectToAddress (address);
     }
 
     void timerCallback ()
@@ -130,7 +133,7 @@ public:
         }
     }
 
-    RealTimeAnalyser&         realTimeAudioFeatures;
+    RealTimeHarmonicAnalyser& realTimeAudioFeatures;
     OSCSender                 sender;
     std::vector<ValueHistory> featureHistories;
     String                    address;

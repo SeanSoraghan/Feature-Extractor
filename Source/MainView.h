@@ -38,18 +38,17 @@ public:
         tracks.setBounds (getLocalBounds());
     }
 
-    //void addAnalyserTrack (AnalyserTrackController& controller, String channelName, CustomAudioDeviceSetupDetails& deviceSetupDetails)
-    //{
-    //    addAndMakeVisible (analysers.add (new AnalyserTrack (channelName)));
-    //    controller.linkGUIDisplayToTrack (analysers.getLast(), deviceSetupDetails);
-    //    resized();
-    //}
-
-    //void addDisabledAnalyserTrack (String channelName)
-    //{
-    //    analysers.add (new AnalyserTrack (channelName));
-    //    analysers.getLast()->setEnabled (false);
-    //}
+    void stopAnimation()
+    {
+        for (int t = 0; t < tracks.getModel()->getNumRows(); ++t)
+        {
+            auto track = dynamic_cast<AnalyserTrack*> (tracks.getComponentForRowNumber(t));
+            if (track != nullptr)
+                track->stopAnimation();
+            //else
+            //    jassertfalse;
+        }
+    }
 
     void setTracksModel (ListBoxModel* m) { tracks.setModel (m); }
     void updateTracks()                   { tracks.updateContent(); }

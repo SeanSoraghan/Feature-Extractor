@@ -96,6 +96,8 @@ public:
         double invNumMagnitudes = 1.0 / (numMagnitudesUsedInFlatnessCalculation > 0.0 ? numMagnitudesUsedInFlatnessCalculation : 1.0);
         float flatness = flatnessMagnitudeSum > eps ? (float) (pow (magnitudeProduct, invNumMagnitudes) / (invNumMagnitudes * flatnessMagnitudeSum)) : 0.0f;
         float logFlatness = log10 (flatness * 9.0 + 1.0);
+        float c = centroid / (float)nyquist;
+        //float logCentroid = log10 (c * 9.0f + 1.0f);
         for (size_t i = 0; i < (size_t) numMagnitudes; ++i)
         {
             varMagnitudeSum += pow ((binCentreFrequencies[i] / nyquist) - (centroid / nyquist), 2.0) * binMagnitudes[i];
@@ -103,7 +105,7 @@ public:
         }
         float maxSpread = (float) ((centroid / nyquist) * (1.0 - (centroid / nyquist)));
         float spread = (float) ((varMagnitudeSum / magnitudeSum) / maxSpread);
-        return {centroid / (float)nyquist, spread, logFlatness, (float) flux};
+        return {c, spread, logFlatness, (float) flux};
     }
 
     float calculateNormalisedSpectralSlope (AudioSampleBuffer& fftResults, int channel)

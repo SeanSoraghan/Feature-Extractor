@@ -36,7 +36,6 @@ public:
             getChildComponent (i)->setBounds (b.removeFromTop (itemHeight));
             b.removeFromTop (spacing);
         }
-        //const int something  = b.getHeight() - 
     }
 
     TextEditor& getAddressEditor()
@@ -49,6 +48,10 @@ public:
         return bundleAddressEditor;
     }
 
+    void setBundleAddress (String bundleAddress)
+    {
+        bundleAddressEditor.setText (bundleAddress, true);
+    }
 private:
     Label      label;
     Label      bundleLabel;

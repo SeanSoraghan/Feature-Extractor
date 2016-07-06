@@ -155,7 +155,10 @@ private:
             double binMagnitude = getMaxBinInNeighbourhood (harmonicBin, 2, normalisedBinMagnitudes);//normalisedBinMagnitudes.getSample (0, harmonicBin);
             harmonicScore += binMagnitude;
         }
-        return harmonicScore / totalNormedMagnitude;
+        double ans = harmonicScore / totalNormedMagnitude;
+        if (ans > 1.0) ans = 1.0;
+        if (ans < 0.0) ans = 0.0;
+        return ans;
     }
 
     static double getMaxBinInNeighbourhood (int centreBin, int neighbourhoodRange, AudioSampleBuffer& binMagnitudes)

@@ -38,7 +38,6 @@ public:
 private:
     void resized()
     {
-        //const auto parent = getParentComponent();
         const int maxListBoxHeight = FeatureExtractorLookAndFeel::getMaxDeviceSettingsListBoxHeight();
         const int h                = FeatureExtractorLookAndFeel::getDeviceSettingsItemHeight();//parent->getItemHeight();
         const int space            = FeatureExtractorLookAndFeel::getInnerComponentSpacing();

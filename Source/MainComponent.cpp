@@ -109,7 +109,7 @@ public:
     void setAudioSettingsDeviceManager (AudioDeviceManager& deviceManager)
     {
         const int minInputChannels              = 0;
-        const int maxInputChannels              = 8;
+        const int maxInputChannels              = 15;
         const int minOutputchannels             = 0;
         const int maxOutputchannels             = 0;
         const bool showMidiIn                   = false;
@@ -171,12 +171,15 @@ public:
 
     void addAnalyserTrack (int channelToAnalyse, String channelName)
     {
-        analyserControllers.add (new AnalyserTrackController (deviceManager, channelToAnalyse, channelName));
+        //"192.168.185.152" paulo
+        ///*"10.100.100.51"*/ blitz
+        // "192.168.186.231" oliver
+        analyserControllers.add (new AnalyserTrackController (deviceManager, channelToAnalyse, channelName, "10.100.100.51:9000", String("/Audio/A") + String(channelToAnalyse)));
     }
 
     void addDisabledAnalyserTrack (String channelName)
     {
-        analyserControllers.add (new AnalyserTrackController (deviceManager, -1, channelName));
+        analyserControllers.add (new AnalyserTrackController (deviceManager, -1, channelName, "10.100.100.53", String::empty));
     }
 
     void clearAllTracks()
@@ -184,6 +187,7 @@ public:
         for (const auto track : analyserControllers)
             track->stopAnalysis();
 
+        view.stopAnimation();
         analyserControllers.clear();
         view.updateTracks();
     }
@@ -203,23 +207,25 @@ public:
                                                Component* existingComponentToUpdate) override
     {
         
+        AnalyserTrack* existingView = dynamic_cast<AnalyserTrack*> (existingComponentToUpdate);
+        if (existingView != nullptr)
+            existingView->stopAnimation();
+
         if (rowNumber < analyserControllers.size())
         {
-            const auto analyserController = analyserControllers.getUnchecked (rowNumber);
-            analyserController->clearGUICallbacks();
-            delete existingComponentToUpdate;
-            auto newTrack = new AnalyserTrack (analyserController->getChannelName());
-            if (analyserController->isEnabled())
-                analyserController->linkGUIDisplayToTrack (newTrack, audioDeviceSelector->getDeviceSetupDetails());
-
-            return newTrack;
+            AnalyserTrackController* trackController = analyserControllers.getUnchecked (rowNumber);
+            if (trackController != nullptr)
+            {
+                trackController->clearGUICallbacks();
+                if (existingView == nullptr)
+                    existingView = new AnalyserTrack (trackController->getChannelName());
+                trackController->linkGUIDisplayToTrack (existingView, audioDeviceSelector->getDeviceSetupDetails(), String ("/Audio/A") + String (rowNumber));
+                return existingView;
+            }
         }
-        else
-        {
-            delete existingComponentToUpdate;
-            return nullptr;
-        }
+        return existingComponentToUpdate;
     }
+
 private:
     SharedResourcePointer<FeatureExtractorLookAndFeel> lookAndFeel;
     ScopedPointer<ChannelSelectorPanel>                channelSelector;

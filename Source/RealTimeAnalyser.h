@@ -88,25 +88,27 @@ private:
 //============================================================================================================================================================
 //============================================================================================================================================================
 
-class RealTimeAnalyser : public Thread
+class RealTimeHarmonicAnalyser : public Thread
 {
 public:
-    RealTimeAnalyser (AudioDataCollector& adc, double sampleRate = 48000.0)
+    RealTimeHarmonicAnalyser (AudioDataCollector& adc, int windowSize, double sampleRate = 48000.0)
     :   Thread ("Audio analysis thread"),
         audioDataCollector (adc),
-        overlapper       (1, 1024, audioDataCollector),
-        fft              (1024, sampleRate),
-        spectralAnalyser (1024),
-        pitchEstimator   (fft)
+        overlapper         (1, windowSize, audioDataCollector),
+        fft                (windowSize, sampleRate),
+        spectralAnalyser   (1024),
+        pitchEstimator     (fft)
     {}
 
     void run() override
     {
         while (!threadShouldExit())
         {
-            const int numSamplesInAnalysisWindow = fft.getFFTExpectedSamples();
+            const int numSamplesInHarmAnalysisWindow = fft.getFFTExpectedSamples();
             AudioSampleBuffer audioWindow = overlapper.getNextBuffer();
-            features.updateFeature (AudioFeatures::eAudioFeature::enRMS, audioWindow.getRMSLevel (0, 0, audioWindow.getNumSamples()));
+            float rms = audioWindow.getRMSLevel (0, 0, audioWindow.getNumSamples());
+            float logRMS = log10 (rms * 9.0f + 1.0f);
+            features.updateFeature (AudioFeatures::eAudioFeature::enRMS, logRMS);
             /* Low-pass filter the audio */
             AudioSampleBuffer filteredAudio (audioWindow);
             filteredAudio.clear();
@@ -171,11 +173,14 @@ public:
     void setOnsetDetectedCallback (std::function<void()> f) { onsetDetectedCallback = f; }
 
     void setOnsetDetectionType (OnsetDetector::eOnsetDetectionType t)           { onsetDetector.type = t; }
-    void sampleRateChanged     (double newSampleRate)                           { fft.setNyquistValue (newSampleRate / 2.0); }
+    void sampleRateChanged     (double newSampleRate)                           
+    { 
+        fft.setNyquistValue (newSampleRate / 2.0); 
+    }
     float getAudioFeature      (AudioFeatures::eAudioFeature featureType) const { return features.getValue (featureType); }
 
     RealTimeAudioDataOverlapper&     getOverlapper()       { return overlapper; }
-    FFTAnalyser&                     getFFTAnalyser()      { return fft; }
+    FFTAnalyser&                     getFFTHarmAnalyser()  { return fft; }
     PitchAnalyser&                   getPitchAnalyser()    { return pitchEstimator; }
     OnsetDetector&                   getOnsetDetector()    { return onsetDetector; }
     HarmonicCharacteristicsAnalyser& getHarmonicAnalyser() { return harmonicAnalyser; }
@@ -193,7 +198,7 @@ private:
     AudioFeatures                   features;
     std::function<void()>           onsetDetectedCallback;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RealTimeAnalyser)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RealTimeHarmonicAnalyser)
 };
 
 

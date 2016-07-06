@@ -317,6 +317,11 @@ public:
                 triggerFeatureView->setTypeCallback (f);
     }
 
+    void startAnimation()
+    {
+        startTimerHz (FeatureExtractorLookAndFeel::getAnimationRateHz());
+    }
+
 private:
     OwnedArray<FeatureVisualiser>                                       featureVisualisers;
     OwnedArray<TriggerFeatureView>                                      triggerFeatureViews;

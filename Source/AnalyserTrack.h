@@ -43,7 +43,7 @@ public:
 
         addAndMakeVisible (audioSourceTypeSelectorController.getSelector());
 
-        gainLabel.setJustificationType  (Justification::centredLeft);
+        gainLabel.setJustificationType  (Justification::centredRight);
         gainSlider.setRange (0.0, 100.0, 0.01);
         gainSlider.addListener (this);
         gainSlider.setDoubleClickReturnValue (true, 1.0);
@@ -55,11 +55,11 @@ public:
 
         addAndMakeVisible (channelNameLabel);
 
-        //addAndMakeVisible (pitchEstimationVisualiser);
     }
 
     ~AnalyserTrack()
     {
+        stopAnimation();
         setAudioSourceTypeChangedCallback (nullptr);
         setAddressChangedCallback         (nullptr);
         setBundleAddressChangedCallback   (nullptr);                                         
@@ -73,8 +73,10 @@ public:
         setOnsetDetectionTypeCallback     (nullptr);
         setFeatureValueQueryCallback      (nullptr);
         setGainChangedCallback            (nullptr);
-        //pitchEstimationVisualiser.clearCallbacks();
     }
+
+    void setChannelName (String n) { channelNameLabel.setText (n, dontSendNotification); }
+
     void resized() override
     {
         auto& localBounds                = getLocalBounds();
@@ -84,16 +86,21 @@ public:
         const auto& oscWidth             = (int)(availableWidth * 0.25f);
         auto& audioAndFeaturesBounds     = trackBounds.removeFromLeft (audioDisplayWidth);
         const int displayHeight          = audioAndFeaturesBounds.getHeight() / 2; 
-        //visualiser, features, osc
+        
         audioScrollingDisplay.setBounds           (audioAndFeaturesBounds.removeFromTop (displayHeight));
         featureListView.setBounds                 (audioAndFeaturesBounds.removeFromTop (displayHeight));
         oscSettingsController.getView().setBounds (trackBounds.removeFromLeft (audioDisplayWidth));
-        //Pitch estimation visualiser
+        
         const auto w = localBounds.getWidth() / 2;
-        //pitchEstimationVisualiser.setBounds       (localBounds);//.removeFromLeft (w));
+        
         auto& labelBounds = getLocalBounds().removeFromTop (FeatureExtractorLookAndFeel::getDeviceSettingsItemHeight()
                                                           + FeatureExtractorLookAndFeel::getInnerComponentSpacing());
-        channelNameLabel.setBounds (labelBounds.removeFromBottom (FeatureExtractorLookAndFeel::getDeviceSettingsItemHeight()).removeFromLeft (100));
+
+        auto sliderLabelBounds = labelBounds.removeFromBottom (FeatureExtractorLookAndFeel::getDeviceSettingsItemHeight());
+        channelNameLabel.setBounds (sliderLabelBounds.removeFromLeft (100));
+        sliderLabelBounds.removeFromLeft (10);
+        gainLabel.setBounds (sliderLabelBounds.removeFromLeft (100));
+        gainSlider.setBounds (sliderLabelBounds.removeFromLeft (100));
     }
 
     void sliderValueChanged (Slider* s) override
@@ -103,8 +110,14 @@ public:
                 gainChangedCallback ((float) s->getValue());
     }
 
+    void stopAnimation() 
+    { 
+        featureListView.setFeatureValueQueryCallback (nullptr); 
+        featureListView.stopTimer(); 
+    }
+
     AudioVisualiserComponent&  getAudioDisplayComponent()     { return audioScrollingDisplay; }
-    //PitchEstimationVisualiser& getPitchEstimationVisualiser() { return pitchEstimationVisualiser; }
+    OSCSettingsController& getOSCSettingsController() { return oscSettingsController; }
 
     void setAudioSourceTypeChangedCallback (std::function<void (eAudioSourceType type)> f) { audioSourceTypeSelectorController.setAudioSourceTypeChangedCallback (f); }
     void setAddressChangedCallback (std::function<bool (String)> f)                        { oscSettingsController.setAddressChangedCallback (f); }
@@ -140,7 +153,9 @@ public:
                 audioScrollingDisplay.pushBuffer (bufferToPush);
             });
         }
-    }
+    } 
+
+    void startAnimation() { featureListView.startAnimation(); }
 
     void setOnsetSensitivityCallback   (std::function<void (float)> f)                                         { featureListView.setOnsetSensitivityCallback (f); }
     void setOnsetWindowSizeCallback    (std::function<void (int)> f)                                           { featureListView.setOnsetWindowLengthCallback (f); }
@@ -159,9 +174,7 @@ private:
     FeatureListModel                featureListModel;
     FeatureListView                 featureListView;
     OSCSettingsController           oscSettingsController;
-    //PitchEstimationVisualiser       pitchEstimationVisualiser;
     AudioSourceSelectorController<> audioSourceTypeSelectorController;
-
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AnalyserTrack);
 };
 
