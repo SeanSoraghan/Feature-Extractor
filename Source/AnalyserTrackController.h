@@ -15,9 +15,11 @@ class AnalyserTrackController
 {
 public:
     AnalyserTrackController (AudioDeviceManager& deviceManagerRef, int channelToAnalyse, String nameOfInputChannel, String ip, String bundle)
-    :   audioDataCollector (channelToAnalyse),
-        audioAnalyser      (audioDataCollector, 1024), 
-        oscFeatureSender   (audioAnalyser, ip, bundle),
+    :   audioDataCollectorHarm (channelToAnalyse),
+        audioDataCollectorSpec (channelToAnalyse),
+        audioAnalyserHarm      (audioDataCollectorHarm, features, 2048),
+        audioAnalyserSpec      (audioDataCollectorSpec, features, 256),
+        oscFeatureSender   (features, ip, bundle),
         deviceManager      (deviceManagerRef),
         channelName        (nameOfInputChannel)
     {
@@ -25,12 +27,18 @@ public:
 
         if (enabled)
         {
-            audioDataCollector.setNotifyAnalysisThreadCallback ([this]()
+            audioDataCollectorHarm.setNotifyAnalysisThreadCallback ([this]()
             {
-                audioAnalyser.notify();
+                audioAnalyserHarm.notify();
             });
+            deviceManager.addAudioCallback (&audioDataCollectorHarm);
 
-            deviceManager.addAudioCallback (&audioDataCollector);
+            audioDataCollectorSpec.setNotifyAnalysisThreadCallback ([this]()
+            {
+                audioAnalyserSpec.notify();
+            });
+            deviceManager.addAudioCallback (&audioDataCollectorSpec);
+
             audioFilePlayer.setupAudioCallback (deviceManager);
         } 
     }
@@ -40,17 +48,20 @@ public:
         if (enabled)
         {
             deviceManager.removeAudioCallback (audioFilePlayer.getAudioSourcePlayer());
-            deviceManager.removeAudioCallback (&audioDataCollector);
+            deviceManager.removeAudioCallback (&audioDataCollectorHarm);
+            deviceManager.removeAudioCallback (&audioDataCollectorSpec);
         }
         stopAnalysis();
-        audioDataCollector.setNotifyAnalysisThreadCallback (nullptr);
+        audioDataCollectorHarm.setNotifyAnalysisThreadCallback (nullptr);
+        audioDataCollectorSpec.setNotifyAnalysisThreadCallback (nullptr);
         clearGUICallbacks(); 
     }
 
     void clearGUICallbacks()
     {
-        audioDataCollector.setBufferToDrawUpdatedCallback  (nullptr);
-        audioAnalyser.setOnsetDetectedCallback             (nullptr);
+        audioDataCollectorHarm.setBufferToDrawUpdatedCallback  (nullptr);
+        audioDataCollectorSpec.setBufferToDrawUpdatedCallback  (nullptr);
+        audioAnalyserSpec.setOnsetDetectedCallback             (nullptr);
         setGUITrackSamplesPerBlockCallback                = nullptr;
     }
 
@@ -59,13 +70,13 @@ public:
         stopAnalysis();
         guiTrack->setChannelName (getChannelName());
         guiTrack->getOSCSettingsController().getView().setBundleAddress (oscBundleAddress);
-        audioDataCollector.setBufferToDrawUpdatedCallback ([this, guiTrack] (AudioSampleBuffer& b) 
+        audioDataCollectorHarm.setBufferToDrawUpdatedCallback ([this, guiTrack] (AudioSampleBuffer& b) 
         {
             if (guiTrack != nullptr)
                 guiTrack->updateBufferToPush (&b);
         });
 
-        audioAnalyser.setOnsetDetectedCallback ([this, guiTrack] () 
+        audioAnalyserSpec.setOnsetDetectedCallback ([this, guiTrack] () 
         {
             if (guiTrack != nullptr)
                 guiTrack->featureTriggered (AudioFeatures::eAudioFeature::enOnset);            
@@ -73,7 +84,7 @@ public:
         
         guiTrack->setFeatureValueQueryCallback ([this] (AudioFeatures::eAudioFeature featureType, float maxValue) 
         { 
-            return audioAnalyser.getAudioFeature (featureType) / maxValue;
+            return getAudioFeature (featureType) / maxValue;
         });
 
         //switches between listening to input or output
@@ -84,7 +95,8 @@ public:
             if (input)
                 audioFilePlayer.stop();
                                                             
-            audioDataCollector.toggleCollectInput (input);
+            audioDataCollectorHarm.toggleCollectInput (input);
+            audioDataCollectorSpec.toggleCollectInput (input);
             JUCE_COMPILER_WARNING("Should these just go durectly after the callback from within auio analyser track?");
             if (guiTrack != nullptr)
             {
@@ -95,7 +107,8 @@ public:
         
         guiTrack->setFileDroppedCallback ([this, guiTrack] (File& f) 
         { 
-            audioDataCollector.clearBuffer();
+            audioDataCollectorHarm.clearBuffer();
+            audioDataCollectorSpec.clearBuffer();
             if (guiTrack != nullptr)
                 guiTrack->clearAudioDisplayData();
             audioFilePlayer.loadFileIntoTransport (f); 
@@ -109,14 +122,18 @@ public:
             }
         } );
 
-        guiTrack->setGainChangedCallback ([this] (float g) { audioDataCollector.setGain (g); });
+        guiTrack->setGainChangedCallback ([this] (float g) 
+        { 
+            audioDataCollectorHarm.setGain (g);
+            audioDataCollectorSpec.setGain (g);
+        });
 
-        guiTrack->setOnsetSensitivityCallback   ([this] (float s)                              { audioAnalyser.setOnsetDetectionSensitivity (s); });
-        guiTrack->setOnsetWindowSizeCallback    ([this] (int s)                                { audioAnalyser.setOnsetWindowLength (s); });
-        guiTrack->setOnsetDetectionTypeCallback ([this] (OnsetDetector::eOnsetDetectionType t) { audioAnalyser.setOnsetDetectionType (t); });
-        guiTrack->setPlayPressedCallback        ([this] ()                                     { audioFilePlayer.play(); audioDataCollector.clearBuffer(); });
-        guiTrack->setPausePressedCallback       ([this] ()                                     { audioFilePlayer.pause(); audioDataCollector.clearBuffer(); });
-        guiTrack->setStopPressedCallback        ([this] ()                                     { audioFilePlayer.stop(); audioDataCollector.clearBuffer(); });
+        guiTrack->setOnsetSensitivityCallback   ([this] (float s)                              { audioAnalyserSpec.setOnsetDetectionSensitivity (s); });
+        guiTrack->setOnsetWindowSizeCallback    ([this] (int s)                                { audioAnalyserSpec.setOnsetWindowLength (s); });
+        guiTrack->setOnsetDetectionTypeCallback ([this] (OnsetDetector::eOnsetDetectionType t) { audioAnalyserSpec.setOnsetDetectionType (t); });
+        guiTrack->setPlayPressedCallback        ([this] ()                                     { audioFilePlayer.play(); clearAnalysisBuffers(); });
+        guiTrack->setPausePressedCallback       ([this] ()                                     { audioFilePlayer.pause(); clearAnalysisBuffers(); });
+        guiTrack->setStopPressedCallback        ([this] ()                                     { audioFilePlayer.stop(); clearAnalysisBuffers(); });
         guiTrack->setRestartPressedCallback     ([this] ()                                     { audioFilePlayer.restart(); });
 
         guiTrack->setAddressChangedCallback       ([this] (String address) { return oscFeatureSender.connectToAddress (address); });
@@ -139,31 +156,47 @@ public:
         guiTrack->startAnimation();
     }
 
+    void clearAnalysisBuffers()
+    {
+        audioDataCollectorHarm.clearBuffer();
+        audioDataCollectorSpec.clearBuffer();
+    }
+
+    float getAudioFeature      (AudioFeatures::eAudioFeature featureType) const { return features.getValue (featureType); }
+
     void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
     {
         stopAnalysis();
-        audioAnalyser.sampleRateChanged (sampleRate);
+        audioAnalyserHarm.sampleRateChanged (sampleRate);
+        audioAnalyserSpec.sampleRateChanged (sampleRate);
 
         if (setGUITrackSamplesPerBlockCallback != nullptr)
             setGUITrackSamplesPerBlockCallback (samplesPerBlockExpected);
         
-        audioAnalyser.startThread (4);
-        audioDataCollector.setExpectedSamplesPerBlock (samplesPerBlockExpected);
+        audioAnalyserHarm.startThread (4);
+        audioAnalyserSpec.startThread (4);
+        audioDataCollectorHarm.setExpectedSamplesPerBlock (samplesPerBlockExpected);
+        audioDataCollectorSpec.setExpectedSamplesPerBlock (samplesPerBlockExpected);
     }
 
     void stopAnalysis()
     {
-        audioAnalyser.stopThread (100);
+        audioAnalyserHarm.stopThread (100);
+        audioAnalyserSpec.stopThread (100);
     }
 
+    
 
     String getChannelName() const noexcept { return channelName; }
     bool isEnabled()        const noexcept { return enabled; }
 private: 
     std::function<void (int)> setGUITrackSamplesPerBlockCallback;
     AudioFilePlayer          audioFilePlayer;
-    AudioDataCollector       audioDataCollector;
-    RealTimeHarmonicAnalyser audioAnalyser;
+    AudioFeatures            features;
+    AudioDataCollector       audioDataCollectorHarm;
+    AudioDataCollector       audioDataCollectorSpec;
+    RealTimeHarmonicAnalyser audioAnalyserHarm;
+    RealTimeSpectralAnalyser audioAnalyserSpec;
     OSCFeatureAnalysisOutput oscFeatureSender;
     AudioDeviceManager       &deviceManager;
     String                   channelName;

@@ -13,14 +13,29 @@
 
 struct HarmonicCharacteristics
 {
-    HarmonicCharacteristics (float her, float inharm)
-    :   harmonicEnergyRatio (her),
-        inharmonicity       (inharm)
+    HarmonicCharacteristics (float her, float oer, float inharm)
+    :   harmonicEnergyRatio  (her),
+        oddEvenHarmonicRatio (oer),
+        inharmonicity        (inharm)
     {}
 
     float harmonicEnergyRatio;
+    float oddEvenHarmonicRatio;
     float inharmonicity;
 };
+
+struct HarmonicEnergyCharacteristics
+{
+    HarmonicEnergyCharacteristics (float her, float oer)
+    :   harmonicEnergyRatio (her),
+        oddEvenHarmonicRatio (oer)
+    {
+    }
+
+    float harmonicEnergyRatio;
+    float oddEvenHarmonicRatio;
+};
+
 
 class HarmonicCharacteristicsAnalyser
 {
@@ -71,19 +86,23 @@ public:
         meanMagnitude = magnitudeSum / (double) numMagnitudes;
 
         if (magnitudeSum < 0.001)
-            return {0.0, 0.0};
+            return {0.0, 0.0, 0.0};
 
         fillPeakBins (binMagnitudes, channel, peakBins, meanMagnitude);
         
         double frequencyRangePerBin = nyquist / (double) numMagnitudes;
-        double harmonicEnergyRatio = calculateHarmonicEnergyRatio (normedMagnitudes, f0Estimation, frequencyRangePerBin, sumNormedMagnitude, 15.0, 3.0);
+        HarmonicEnergyCharacteristics h = calculateHarmonicEnergyCharacteristics (/*peakBins*/normedMagnitudes, f0Estimation, frequencyRangePerBin, sumNormedMagnitude, 15.0, 3.0);
+        double harmonicEnergyRatio = h.harmonicEnergyRatio;
+        double oddEvenHarmonicRatio = h.oddEvenHarmonicRatio;
         double inharmonicity = 0.0;
         if (f0Estimation > 0.0)
             inharmonicity = calculateInharmonicity (binMagnitudes, f0Estimation, frequencyRangePerBin, peakBins, magnitudeSum);
 
         float logHER    = log10 (harmonicEnergyRatio * 9.0 + 1.0);
         float logInharm = log10 (inharmonicity       * 9.0 + 1.0);
-        return {(float) logHER, (float) logInharm}; 
+        float logOER    = log10 (oddEvenHarmonicRatio * 9.0 + 1.0);
+
+        return {(float) logHER, (float) logOER, (float) logInharm}; 
     }
 
     void enableFFTMagnitudesBufferNeedsUpdating()    { fftMagnitudesToDrawNeedsUpdating.set (1); }
@@ -125,14 +144,32 @@ private:
         return true;
     }
 
-    static double  calculateHarmonicEnergyRatio (AudioSampleBuffer& normalisedBinMagnitudes, 
-                                                 double f0Estimate,
-                                                 double frequencyRangePerBin, 
-                                                 double totalNormedMagnitude,
-                                                 double numLower,
-                                                 double numHarmonics)
+    static HarmonicEnergyCharacteristics  calculateHarmonicEnergyCharacteristics (AudioSampleBuffer& normalisedBinMagnitudes, 
+                                                                                  double f0Estimate,
+                                                                                  double frequencyRangePerBin, 
+                                                                                  double totalNormedMagnitude,
+                                                                                  double numLower,
+                                                                                  double numHarmonics)
     {
         double harmonicScore = 0.0;
+        double evenHarmonicEnergy = 0.0;
+        double oddHarmonicEnergy = 0.0;
+        
+        //std::vector<double> harmonicEnergyValues;
+        //for (int h = 0; h < numHarmonics; h++)
+        //    harmonicEnergyValues.push_back (0.0);
+
+        //int peakNum = 0;
+        //for (int p : peakBins)
+        //{
+        //    double peakFreq = p * frequencyRangePerBin + frequencyRangePerBin * 0.5;
+        //    if (peakFreq > f0Estimate)
+        //    {
+        //        double peakRatio = getFrequencyRatio (peakFreq, f0Estimate);
+
+        //    }
+        //    peakNum ++;
+        //}
         for (double lower = 1.0; lower < numLower + 1.0; ++lower)
         {
             double lowerHarmFreq = f0Estimate / pow(2.0, lower);
@@ -153,12 +190,26 @@ private:
                 break;
 
             double binMagnitude = getMaxBinInNeighbourhood (harmonicBin, 2, normalisedBinMagnitudes);//normalisedBinMagnitudes.getSample (0, harmonicBin);
+            
+            if (int(harmonic) % 2 == 0)
+                evenHarmonicEnergy += binMagnitude;
+            else
+                oddHarmonicEnergy += binMagnitude;
+
             harmonicScore += binMagnitude;
         }
-        double ans = harmonicScore / totalNormedMagnitude;
-        if (ans > 1.0) ans = 1.0;
-        if (ans < 0.0) ans = 0.0;
-        return ans;
+        double her = harmonicScore / totalNormedMagnitude;
+        if (her > 1.0) her = 1.0;
+        if (her < 0.0) her = 0.0;
+
+        double oer = 1.0;
+        if (oddHarmonicEnergy > 0.0)
+            oer = evenHarmonicEnergy / oddHarmonicEnergy;
+
+        if (oer > 1.0) oer = 1.0;
+        if (oer < 0.0) oer = 0.0;
+
+        return { (float) her, (float) oer };
     }
 
     static double getMaxBinInNeighbourhood (int centreBin, int neighbourhoodRange, AudioSampleBuffer& binMagnitudes)

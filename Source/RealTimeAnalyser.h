@@ -25,6 +25,7 @@ public:
         enFlux,
         enSlope,
         enHarmonicEnergyRatio,
+        enOddEvenHarmonicRatio,
         enInharmonicity,
         numFeatures
     };
@@ -51,6 +52,8 @@ public:
                 return String ("Slope");
             case enHarmonicEnergyRatio:
                 return String ("H.E.R");
+            case enOddEvenHarmonicRatio:
+                return String ("O.E.R");
             case enInharmonicity:
                 return String ("Inharm.");
         }
@@ -88,27 +91,60 @@ private:
 //============================================================================================================================================================
 //============================================================================================================================================================
 
-class RealTimeHarmonicAnalyser : public Thread
+class RealTimeAnalyser : public Thread
 {
 public:
-    RealTimeHarmonicAnalyser (AudioDataCollector& adc, int windowSize, double sampleRate = 48000.0)
+    RealTimeAnalyser (AudioDataCollector& adc, AudioFeatures& featuresRef, int windowSize, double sampleRate = 48000.0)
     :   Thread ("Audio analysis thread"),
         audioDataCollector (adc),
         overlapper         (1, windowSize, audioDataCollector),
         fft                (windowSize, sampleRate),
-        spectralAnalyser   (1024),
-        pitchEstimator     (fft)
+        features           (featuresRef)
+    {}
+
+    virtual void run() override
+    {}
+
+    void sampleRateChanged (double newSampleRate)                           
+    { 
+        fft.setNyquistValue (newSampleRate / 2.0); 
+    }
+
+    RealTimeAudioDataOverlapper&    getOverlapper()       { return overlapper; }
+    FFTAnalyser&                    getFFTAnalyser()      { return fft; }
+
+    AudioFeatures&                  getFeatures()         { return features; }
+private:
+    AudioDataCollector&             audioDataCollector;
+    RealTimeAudioDataOverlapper     overlapper;
+    FFTAnalyser                     fft;
+    AudioFeatures&                  features;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RealTimeAnalyser)
+};
+
+
+//============================================================================================================================================================
+//============================================================================================================================================================
+
+class RealTimeHarmonicAnalyser : public RealTimeAnalyser
+{
+public:
+    RealTimeHarmonicAnalyser (AudioDataCollector& adc, AudioFeatures& featuresRef, int windowSize, double sampleRate = 48000.0)
+    :   RealTimeAnalyser   (adc, featuresRef, windowSize, sampleRate),
+        pitchEstimator     (getFFTAnalyser())
     {}
 
     void run() override
     {
         while (!threadShouldExit())
         {
-            const int numSamplesInHarmAnalysisWindow = fft.getFFTExpectedSamples();
-            AudioSampleBuffer audioWindow = overlapper.getNextBuffer();
+            FFTAnalyser& fftAnalyser = getFFTAnalyser();
+            const int numSamplesInHarmAnalysisWindow = fftAnalyser.getFFTExpectedSamples();
+            AudioSampleBuffer audioWindow = getOverlapper().getNextBuffer();
             float rms = audioWindow.getRMSLevel (0, 0, audioWindow.getNumSamples());
             float logRMS = log10 (rms * 9.0f + 1.0f);
-            features.updateFeature (AudioFeatures::eAudioFeature::enRMS, logRMS);
+            getFeatures().updateFeature (AudioFeatures::eAudioFeature::enRMS, logRMS);
             /* Low-pass filter the audio */
             AudioSampleBuffer filteredAudio (audioWindow);
             filteredAudio.clear();
@@ -116,34 +152,77 @@ public:
 
             /* Apply windowing function */
             windower.scaleBufferWithBartlettWindowing (filteredAudio);
-            windower.scaleBufferWithBartlettWindowing (audioWindow);
 
             /* Compute FFT */
-            AudioSampleBuffer filteredFrequencyBuffer = fft.getFrequencyData (filteredAudio);
-            AudioSampleBuffer frequencyBuffer = fft.getFrequencyData (audioWindow);
-
-            /* Get spectral features */
-            SpectralCharacteristics spectralFeatures = spectralAnalyser.calculateSpectralCharacteristics (frequencyBuffer, 0, fft.getNyquist());
-            features.updateFeature (AudioFeatures::eAudioFeature::enCentroid, spectralFeatures.centroid);
-            features.updateFeature (AudioFeatures::eAudioFeature::enFlatness, spectralFeatures.flatness);
-            features.updateFeature (AudioFeatures::eAudioFeature::enSpread,   spectralFeatures.spread);
-            features.updateFeature (AudioFeatures::eAudioFeature::enFlux,     spectralFeatures.flux);
-            features.updateFeature (AudioFeatures::eAudioFeature::enSlope,    spectralAnalyser.calculateNormalisedSpectralSlope (frequencyBuffer, 0));
-
-            features.updateFeature (AudioFeatures::eAudioFeature::enOnset, detectOnset());
-            
-            if (features.getValue (AudioFeatures::eAudioFeature::enOnset) > 0.0f && onsetDetectedCallback != nullptr)
-                onsetDetectedCallback();
+            AudioSampleBuffer filteredFrequencyBuffer = fftAnalyser.getFrequencyData (filteredAudio);
+            AudioSampleBuffer frequencyBuffer = fftAnalyser.getFrequencyData (audioWindow);
             
             /* Estimate Pitch */
             double f0Estimate = pitchEstimator.estimatePitch (filteredFrequencyBuffer);
             const double f0NormalisationFactor = 5000.0;
-            features.updateFeature (AudioFeatures::eAudioFeature::enF0, (float) (f0Estimate / f0NormalisationFactor));
+            getFeatures().updateFeature (AudioFeatures::eAudioFeature::enF0, (float) (f0Estimate / f0NormalisationFactor));
 
             /* Calculate harmonic features based on pitch estimation */
-            HarmonicCharacteristics harmonicFeatures = harmonicAnalyser.calculateHarmonicCharacteristics (frequencyBuffer, f0Estimate, fft.getNyquist(), 0);
-            features.updateFeature (AudioFeatures::eAudioFeature::enHarmonicEnergyRatio, harmonicFeatures.harmonicEnergyRatio);
-            features.updateFeature (AudioFeatures::eAudioFeature::enInharmonicity,       harmonicFeatures.inharmonicity);
+            HarmonicCharacteristics harmonicFeatures = harmonicAnalyser.calculateHarmonicCharacteristics (frequencyBuffer, f0Estimate, getFFTAnalyser().getNyquist(), 0);
+            getFeatures().updateFeature (AudioFeatures::eAudioFeature::enHarmonicEnergyRatio, harmonicFeatures.harmonicEnergyRatio);
+            getFeatures().updateFeature (AudioFeatures::eAudioFeature::enOddEvenHarmonicRatio, harmonicFeatures.harmonicEnergyRatio);
+            getFeatures().updateFeature (AudioFeatures::eAudioFeature::enInharmonicity,       harmonicFeatures.inharmonicity);
+
+            /* Wait for notification that new audio data has come in from audio thread */
+            wait (-1);
+        }
+    }
+
+    PitchAnalyser&                   getPitchAnalyser()    { return pitchEstimator; }
+    HarmonicCharacteristicsAnalyser& getHarmonicAnalyser() { return harmonicAnalyser; }
+private:
+    AudioFilter                     filter;
+    RealTimeWindower                windower;
+    HarmonicCharacteristicsAnalyser harmonicAnalyser;
+    PitchAnalyser                   pitchEstimator;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RealTimeHarmonicAnalyser)
+};
+
+//============================================================================================================================================================
+//============================================================================================================================================================
+
+class RealTimeSpectralAnalyser : public RealTimeAnalyser
+{
+public:
+    RealTimeSpectralAnalyser (AudioDataCollector& adc, AudioFeatures& featuresRef, int windowSize, double sampleRate = 48000.0)
+    :   RealTimeAnalyser (adc, featuresRef, windowSize, sampleRate),
+        spectralAnalyser (windowSize)
+    {}
+
+    void run() override
+    {
+        while (!threadShouldExit())
+        {
+            const int numSamplesInHarmAnalysisWindow = getFFTAnalyser().getFFTExpectedSamples();
+            AudioSampleBuffer audioWindow = getOverlapper().getNextBuffer();
+            float rms = audioWindow.getRMSLevel (0, 0, audioWindow.getNumSamples());
+            float logRMS = log10 (rms * 9.0f + 1.0f);
+            getFeatures().updateFeature (AudioFeatures::eAudioFeature::enRMS, logRMS);
+
+            /* Apply windowing function */
+            windower.scaleBufferWithBartlettWindowing (audioWindow);
+
+            /* Compute FFT */
+            AudioSampleBuffer frequencyBuffer = getFFTAnalyser().getFrequencyData (audioWindow);
+
+            /* Get spectral features */
+            SpectralCharacteristics spectralFeatures = spectralAnalyser.calculateSpectralCharacteristics (frequencyBuffer, 0, getFFTAnalyser().getNyquist());
+            getFeatures().updateFeature (AudioFeatures::eAudioFeature::enCentroid, spectralFeatures.centroid);
+            getFeatures().updateFeature (AudioFeatures::eAudioFeature::enFlatness, spectralFeatures.flatness);
+            getFeatures().updateFeature (AudioFeatures::eAudioFeature::enSpread,   spectralFeatures.spread);
+            getFeatures().updateFeature (AudioFeatures::eAudioFeature::enFlux,     spectralFeatures.flux);
+            getFeatures().updateFeature (AudioFeatures::eAudioFeature::enSlope,    spectralAnalyser.calculateNormalisedSpectralSlope (frequencyBuffer, 0));
+
+            getFeatures().updateFeature (AudioFeatures::eAudioFeature::enOnset, detectOnset());
+            
+            if (getFeatures().getValue (AudioFeatures::eAudioFeature::enOnset) > 0.0f && onsetDetectedCallback != nullptr)
+                onsetDetectedCallback();
 
             /* Wait for notification that new audio data has come in from audio thread */
             wait (-1);
@@ -152,8 +231,8 @@ public:
 
     float detectOnset ()
     {
-        float currentSpectralFluxValue = features.getValue (AudioFeatures::eAudioFeature::enFlux);
-        float currentAmp               = features.getValue (AudioFeatures::eAudioFeature::enRMS);
+        float currentSpectralFluxValue = getFeatures().getValue (AudioFeatures::eAudioFeature::enFlux);
+        float currentAmp               = getFeatures().getValue (AudioFeatures::eAudioFeature::enRMS);
         onsetDetector.addSpectralFluxAndAmpValue (currentSpectralFluxValue, currentAmp);
         return onsetDetector.detectOnset() ? 1.0f : 0.0f;
     }
@@ -173,35 +252,16 @@ public:
     void setOnsetDetectedCallback (std::function<void()> f) { onsetDetectedCallback = f; }
 
     void setOnsetDetectionType (OnsetDetector::eOnsetDetectionType t)           { onsetDetector.type = t; }
-    void sampleRateChanged     (double newSampleRate)                           
-    { 
-        fft.setNyquistValue (newSampleRate / 2.0); 
-    }
-    float getAudioFeature      (AudioFeatures::eAudioFeature featureType) const { return features.getValue (featureType); }
 
-    RealTimeAudioDataOverlapper&     getOverlapper()       { return overlapper; }
-    FFTAnalyser&                     getFFTHarmAnalyser()  { return fft; }
-    PitchAnalyser&                   getPitchAnalyser()    { return pitchEstimator; }
     OnsetDetector&                   getOnsetDetector()    { return onsetDetector; }
-    HarmonicCharacteristicsAnalyser& getHarmonicAnalyser() { return harmonicAnalyser; }
     SpectralCharacteristicsAnalyser& getSpectralAnalyser() { return spectralAnalyser; }
 private:
-    AudioDataCollector&             audioDataCollector;
-    AudioFilter                     filter;
     RealTimeWindower                windower;
-    RealTimeAudioDataOverlapper     overlapper;
-    FFTAnalyser                     fft;
     SpectralCharacteristicsAnalyser spectralAnalyser;
-    HarmonicCharacteristicsAnalyser harmonicAnalyser;
-    PitchAnalyser                   pitchEstimator;
     OnsetDetector                   onsetDetector;
-    AudioFeatures                   features;
     std::function<void()>           onsetDetectedCallback;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RealTimeHarmonicAnalyser)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RealTimeSpectralAnalyser)
 };
-
-
-
 
 #endif  // REALTIMEANALYSER_H_INCLUDED

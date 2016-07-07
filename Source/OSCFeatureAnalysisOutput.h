@@ -65,7 +65,7 @@ public:
         }
     }
 
-    OSCFeatureAnalysisOutput (RealTimeHarmonicAnalyser& rta, String ip, String bundle)
+    OSCFeatureAnalysisOutput (AudioFeatures& rta, String ip, String bundle)
     :   realTimeAudioFeatures (rta),
         address (ip),
         bundleAddress (bundle)
@@ -88,18 +88,18 @@ public:
 
     void sendSpectralFeaturesViaOSC (bool updateHarmonicFeatures)
     {
-        float rmsLevel = realTimeAudioFeatures.getAudioFeature (AudioFeatures::eAudioFeature::enRMS);
-        float centroid = realTimeAudioFeatures.getAudioFeature (AudioFeatures::eAudioFeature::enCentroid);
-        float flatness = realTimeAudioFeatures.getAudioFeature (AudioFeatures::eAudioFeature::enFlatness);
-        float spread =   realTimeAudioFeatures.getAudioFeature (AudioFeatures::eAudioFeature::enSpread);
-        float slope =    realTimeAudioFeatures.getAudioFeature (AudioFeatures::eAudioFeature::enSlope);
-        float flux =     realTimeAudioFeatures.getAudioFeature (AudioFeatures::eAudioFeature::enFlux);
-        float onset =    realTimeAudioFeatures.getAudioFeature (AudioFeatures::eAudioFeature::enOnset);  
+        float rmsLevel = getAudioFeature (AudioFeatures::eAudioFeature::enRMS);
+        float centroid = getAudioFeature (AudioFeatures::eAudioFeature::enCentroid);
+        float flatness = getAudioFeature (AudioFeatures::eAudioFeature::enFlatness);
+        float spread =   getAudioFeature (AudioFeatures::eAudioFeature::enSpread);
+        float slope =    getAudioFeature (AudioFeatures::eAudioFeature::enSlope);
+        float flux =     getAudioFeature (AudioFeatures::eAudioFeature::enFlux);
+        float onset =    getAudioFeature (AudioFeatures::eAudioFeature::enOnset);  
         if (updateHarmonicFeatures)
         {
-            float f0     =  realTimeAudioFeatures.getAudioFeature (AudioFeatures::eAudioFeature::enF0);
-            float her    =  realTimeAudioFeatures.getAudioFeature (AudioFeatures::eAudioFeature::enHarmonicEnergyRatio);
-            float inharm =  realTimeAudioFeatures.getAudioFeature (AudioFeatures::eAudioFeature::enInharmonicity);  
+            float f0     =  getAudioFeature (AudioFeatures::eAudioFeature::enF0);
+            float her    =  getAudioFeature (AudioFeatures::eAudioFeature::enHarmonicEnergyRatio);
+            float inharm =  getAudioFeature (AudioFeatures::eAudioFeature::enInharmonicity);  
             //DBG("F0 estimation: "<<f0<<" |her: "<<her<<" |inharm: "<<inharm);
             //sender.send (bundleAddress, onset, rmsLevel, centroid, flatness, spread, slope, f0, her, inharm);
             sender.send (bundleAddress, onset, rmsLevel, f0, centroid, slope, spread, flatness, flux, her, inharm);
@@ -133,7 +133,9 @@ public:
         }
     }
 
-    RealTimeHarmonicAnalyser& realTimeAudioFeatures;
+    float getAudioFeature      (AudioFeatures::eAudioFeature featureType) const { return realTimeAudioFeatures.getValue (featureType); }
+
+    AudioFeatures& realTimeAudioFeatures;
     OSCSender                 sender;
     std::vector<ValueHistory> featureHistories;
     String                    address;
