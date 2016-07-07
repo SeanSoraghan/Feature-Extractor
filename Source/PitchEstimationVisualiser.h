@@ -98,7 +98,7 @@ public:
         const auto halfBufferWidth                   = localBounds.getWidth() / 2.0f;
         overlappedBufferVisualiser.setBounds           (localBounds.removeFromTop (bufferVisualiserHeight).getSmallestIntegerContainer());
         fftBufferVisualiser.setBounds                  (localBounds.removeFromTop (bufferVisualiserHeight).getSmallestIntegerContainer());
-        auto& autoCorrelationAndFFTMagBounds          = localBounds.removeFromTop (bufferVisualiserHeight);
+        auto autoCorrelationAndFFTMagBounds          = localBounds.removeFromTop (bufferVisualiserHeight);
         autoCorrelationBufferVisualiser.setBounds      (autoCorrelationAndFFTMagBounds.removeFromLeft (halfBufferWidth).getSmallestIntegerContainer());
         fftMagnitudesVisualiser.setBounds              (autoCorrelationAndFFTMagBounds.removeFromLeft (halfBufferWidth).getSmallestIntegerContainer());
         cumulativeDifferenceBufferVisualiser.setBounds (localBounds.removeFromTop (bufferVisualiserHeight).removeFromLeft (halfBufferWidth).getSmallestIntegerContainer());

@@ -15,7 +15,7 @@ class ChannelSelectorPanel : public Component,
                              private ChangeListener
 {
 public:
-    ChannelSelectorPanel (CustomAudioDeviceSetupDetails& setupDetails)
+    ChannelSelectorPanel (const CustomAudioDeviceSetupDetails& setupDetails)
     :   setup (setupDetails)
     {
         setup.manager->addChangeListener (this);

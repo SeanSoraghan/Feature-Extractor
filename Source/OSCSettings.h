@@ -30,7 +30,7 @@ public:
     {
         const int itemHeight = FeatureExtractorLookAndFeel::getDeviceSettingsItemHeight();
         const int spacing    = FeatureExtractorLookAndFeel::getInnerComponentSpacing();
-        auto& b = getLocalBounds().reduced (FeatureExtractorLookAndFeel::getComponentInset());
+        auto b = getLocalBounds().reduced (FeatureExtractorLookAndFeel::getComponentInset());
         for (int i = 0; i < getNumChildComponents(); ++i)
         {
             getChildComponent (i)->setBounds (b.removeFromTop (itemHeight));

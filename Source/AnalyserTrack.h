@@ -79,12 +79,12 @@ public:
 
     void resized() override
     {
-        auto& localBounds                = getLocalBounds();
-        auto& trackBounds                = localBounds.removeFromTop (150);//<- magic number to go in LnF
+        auto localBounds                = getLocalBounds();
+        auto trackBounds                = localBounds.removeFromTop (150);//<- magic number to go in LnF
         const auto& availableWidth       = trackBounds.getWidth();
         const auto& audioDisplayWidth    = (int)(availableWidth * 0.75f);
         const auto& oscWidth             = (int)(availableWidth * 0.25f);
-        auto& audioAndFeaturesBounds     = trackBounds.removeFromLeft (audioDisplayWidth);
+        auto audioAndFeaturesBounds     = trackBounds.removeFromLeft (audioDisplayWidth);
         const int displayHeight          = audioAndFeaturesBounds.getHeight() / 2; 
         
         audioScrollingDisplay.setBounds           (audioAndFeaturesBounds.removeFromTop (displayHeight));
@@ -93,7 +93,7 @@ public:
         
         const auto w = localBounds.getWidth() / 2;
         
-        auto& labelBounds = getLocalBounds().removeFromTop (FeatureExtractorLookAndFeel::getDeviceSettingsItemHeight()
+        auto labelBounds = getLocalBounds().removeFromTop (FeatureExtractorLookAndFeel::getDeviceSettingsItemHeight()
                                                           + FeatureExtractorLookAndFeel::getInnerComponentSpacing());
 
         auto sliderLabelBounds = labelBounds.removeFromBottom (FeatureExtractorLookAndFeel::getDeviceSettingsItemHeight());

@@ -39,7 +39,7 @@ public:
     {
         ignoreUnused (numInputChannels);
         ignoreUnused (numOutputChannels);
-        const float** channelData = collectInput ? inputChannelData : outputChannelData;
+        const float* const* channelData = collectInput ? inputChannelData : outputChannelData;
 
         if (collectInput)
             jassert (numInputChannels >= channelToCollect);

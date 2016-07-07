@@ -92,7 +92,7 @@ public:
                         + (numBoxes + 1) * FeatureExtractorLookAndFeel::getInnerComponentSpacing();
     }
 
-    CustomAudioDeviceSetupDetails getDeviceSetupDetails();
+    const CustomAudioDeviceSetupDetails getDeviceSetupDetails();
     //==============================================================================
     /** @internal */
     void resized() override;

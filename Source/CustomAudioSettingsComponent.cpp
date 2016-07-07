@@ -114,7 +114,7 @@ public:
         Rectangle<int> total    = getLocalBounds();
         const int comboBoxWidth = (int) (total.getWidth() * FeatureExtractorLookAndFeel::getDeviceSettingsComboBoxWidthRatio());
 
-        auto& r = total.removeFromRight (comboBoxWidth);
+        auto r = total.removeFromRight (comboBoxWidth);
 
         const int maxListBoxHeight = FeatureExtractorLookAndFeel::getMaxDeviceSettingsListBoxHeight();
         const int h                = FeatureExtractorLookAndFeel::getDeviceSettingsItemHeight();
@@ -555,7 +555,7 @@ void CustomAudioDeviceSelectorComponent::updateAllControls()
     resized();
 }
 
-CustomAudioDeviceSetupDetails CustomAudioDeviceSelectorComponent::getDeviceSetupDetails()
+const CustomAudioDeviceSetupDetails CustomAudioDeviceSelectorComponent::getDeviceSetupDetails()
 {
     CustomAudioDeviceSetupDetails details;
     details.manager = &deviceManager;

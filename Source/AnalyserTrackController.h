@@ -65,7 +65,7 @@ public:
         setGUITrackSamplesPerBlockCallback                = nullptr;
     }
 
-    void linkGUIDisplayToTrack (AnalyserTrack* guiTrack, CustomAudioDeviceSetupDetails& audioSetupDetails, String oscBundleAddress)
+    void linkGUIDisplayToTrack (AnalyserTrack* guiTrack, const CustomAudioDeviceSetupDetails& audioSetupDetails, String oscBundleAddress)
     {
         stopAnalysis();
         guiTrack->setChannelName (getChannelName());

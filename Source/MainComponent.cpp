@@ -80,9 +80,9 @@ public:
 
     void resized() override
     {
-        auto& localBounds = getLocalBounds();
+        auto localBounds = getLocalBounds();
         const auto deviceSettingsHeight = audioDeviceSelector != nullptr ? audioDeviceSelector->getRequiredHeight() : 0;
-        auto& selectorBounds = localBounds.removeFromTop (deviceSettingsHeight);
+        auto selectorBounds = localBounds.removeFromTop (deviceSettingsHeight);
         const auto channelSelectorWidth = selectorBounds.getWidth() / 2;
         const auto& channelSelectorBounds = selectorBounds.removeFromLeft (channelSelectorWidth);
 

@@ -40,7 +40,7 @@ public:
                                 float** outputChannelData, int numOutputChannels,
                                 int numberOfSamples) override
     {
-        const float** channelData = drawInput ? inputChannelData : outputChannelData;
+        const float* const* channelData = drawInput ? inputChannelData : outputChannelData;
         const int numChannels     = drawInput ? numInputChannels : numOutputChannels;
         for (int i = 0; i < numberOfSamples; ++i)
         {
