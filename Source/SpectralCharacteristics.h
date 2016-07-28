@@ -13,16 +13,18 @@
 
 struct SpectralCharacteristics
 {
-    SpectralCharacteristics (float sCentroid, float sSpread, float sFlatness, float sFlux)
+    SpectralCharacteristics (float sCentroid, float sSpread, float sFlatness, float sLER, float sFlux)
     :   centroid (sCentroid),
         spread   (sSpread),
         flatness (sFlatness),
+        ler      (sLER),
         flux     (sFlux)
     {}
         
     float centroid;
     float spread;
     float flatness;
+    float ler;
     float flux;
 };
 
@@ -35,7 +37,7 @@ public:
             previousBinMagnitudes.push_back (0.0f);
     }
 
-    SpectralCharacteristics calculateSpectralCharacteristics (AudioSampleBuffer& fftResults, int channel, double nyquist)
+    SpectralCharacteristics calculateSpectralCharacteristics (AudioSampleBuffer& fftResults, double rms, int channel, double nyquist)
     {
         jassert (fftResults.getNumSamples() % 2 == 0);
         const int numFFTElements = (int) fftResults.getNumSamples() / 2;
@@ -48,13 +50,16 @@ public:
         double magnitudeProduct     = 1.0;
         double flatnessMagnitudeSum = 0.0;
         double flux                 = 0.0;
+        double lhr                  = 0.0;
 
         std::vector<double> binCentreFrequencies ((size_t)numMagnitudes);
         std::vector<double> binMagnitudes ((size_t)numMagnitudes);
 
         jassert (previousBinMagnitudes.size() == binMagnitudes.size());
 
+        double eps = 0.01 * rms;
         double numMagnitudesUsedInFlatnessCalculation = 0.0;
+        int lowerPortion = numMagnitudes / 5;
         for (size_t magnitude = 0; magnitude < (size_t) numMagnitudes; magnitude++)
         {
             int fftIndex = magnitude * 2;
@@ -63,6 +68,7 @@ public:
             binCentreFrequencies[magnitude] = binCentreFrequency;
             double binValue = (double) fftResults.getSample (channel, (int)fftIndex);
             double binMagnitude = binValue * binValue;
+
             /*flux*/
             double diff = abs (binMagnitude) - abs (previousBinMagnitudes[magnitude]);
             double rectifiedDiff = (diff + abs (diff)) / 2.0;
@@ -73,30 +79,35 @@ public:
             binMagnitudes[magnitude] = binMagnitude;
             
             magnitudeSum += binMagnitude;
-            double eps = 0.001;
+            
+            if (magnitude == lowerPortion)
+                lhr = magnitudeSum;
+
             if (binMagnitude > eps)
             {
                 flatnessMagnitudeSum += binMagnitude;
                 magnitudeProduct     *= binMagnitude;
                 numMagnitudesUsedInFlatnessCalculation ++;
             }
-
             weightedMagnitudeSum += binCentreFrequency * binMagnitude;
         }
         
         float maxFlux = (numMagnitudes * (numMagnitudes + 1)) / 2.0f;
         flux /= maxFlux;
 
-        double eps = 0.05;
-        if (!(magnitudeSum > eps))
-            return {0.0f, 0.0f, 0.0f, 0.0f};
+        double epsSum = 0.05;
+        if (!(magnitudeSum > epsSum))
+            return {0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+
+        lhr /= magnitudeSum;
+
         float centroid = (float) (weightedMagnitudeSum / magnitudeSum);
         //        float scaledC = (float)(log2 (1.0 + 1023.0 * (centroid)) / 10.0);
         
         double invNumMagnitudes = 1.0 / (numMagnitudesUsedInFlatnessCalculation > 0.0 ? numMagnitudesUsedInFlatnessCalculation : 1.0);
         float flatness = flatnessMagnitudeSum > eps ? (float) (pow (magnitudeProduct, invNumMagnitudes) / (invNumMagnitudes * flatnessMagnitudeSum)) : 0.0f;
         float logFlatness = log10 (flatness * 9.0 + 1.0);
-        float c = centroid / (float)nyquist;
+        float c = centroid / (float)(nyquist / 2.0);
         float logCentroid = log10 (c * 9.0f + 1.0f);
         for (size_t i = 0; i < (size_t) numMagnitudes; ++i)
         {
@@ -105,7 +116,7 @@ public:
         }
         float maxSpread = (float) ((centroid / nyquist) * (1.0 - (centroid / nyquist)));
         float spread = (float) ((varMagnitudeSum / magnitudeSum) / maxSpread);
-        return {logCentroid, spread, logFlatness, (float) flux};
+        return {logCentroid, spread, logFlatness, (float) lhr, (float) flux};
     }
 
     float calculateNormalisedSpectralSlope (AudioSampleBuffer& fftResults, int channel)

@@ -171,15 +171,12 @@ public:
 
     void addAnalyserTrack (int channelToAnalyse, String channelName)
     {
-        //"192.168.185.152" paulo
-        ///*"10.100.100.51"*/ blitz
-        // "192.168.186.231" oliver
-        analyserControllers.add (new AnalyserTrackController (deviceManager, channelToAnalyse, channelName, "10.100.100.51:9000", String("/Audio/A") + String(channelToAnalyse)));
+        analyserControllers.add (new AnalyserTrackController (deviceManager, channelToAnalyse, channelName, "127.0.0.1:9000", "127.0.0.1:9000", String("/Audio/A") + String(channelToAnalyse)));
     }
 
     void addDisabledAnalyserTrack (String channelName)
     {
-        analyserControllers.add (new AnalyserTrackController (deviceManager, -1, channelName, "10.100.100.53", String::empty));
+        analyserControllers.add (new AnalyserTrackController (deviceManager, -1, channelName, "127.0.0.1:9000", "127.0.0.1:9000", String::empty));
     }
 
     void clearAllTracks()

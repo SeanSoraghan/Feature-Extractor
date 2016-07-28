@@ -14,14 +14,15 @@
 class AnalyserTrackController
 {
 public:
-    AnalyserTrackController (AudioDeviceManager& deviceManagerRef, int channelToAnalyse, String nameOfInputChannel, String ip, String bundle)
-    :   audioDataCollectorHarm (channelToAnalyse),
-        audioDataCollectorSpec (channelToAnalyse),
-        audioAnalyserHarm      (audioDataCollectorHarm, features, 2048),
-        audioAnalyserSpec      (audioDataCollectorSpec, features, 256),
-        oscFeatureSender   (features, ip, bundle),
-        deviceManager      (deviceManagerRef),
-        channelName        (nameOfInputChannel)
+    AnalyserTrackController (AudioDeviceManager& deviceManagerRef, int channelToAnalyse, String nameOfInputChannel, String ip, String secondaryIP, String bundle)
+    :   audioDataCollectorHarm    (channelToAnalyse),
+        audioDataCollectorSpec    (channelToAnalyse),
+        audioAnalyserHarm         (audioDataCollectorHarm, features, 2048),
+        audioAnalyserSpec         (audioDataCollectorSpec, features, 2048),
+        oscFeatureSender          (features, ip, bundle),
+        secondaryOSCFeatureSender (features, secondaryIP, bundle),
+        deviceManager             (deviceManagerRef),
+        channelName               (nameOfInputChannel)
     {
         enabled = channelToAnalyse >= 0;
 
@@ -136,11 +137,18 @@ public:
         guiTrack->setStopPressedCallback        ([this] ()                                     { audioFilePlayer.stop(); clearAnalysisBuffers(); });
         guiTrack->setRestartPressedCallback     ([this] ()                                     { audioFilePlayer.restart(); });
 
-        guiTrack->setAddressChangedCallback       ([this] (String address) { return oscFeatureSender.connectToAddress (address); });
-        guiTrack->setBundleAddressChangedCallback ([this] (String address) { oscFeatureSender.bundleAddress = address; });
+        guiTrack->setAddressChangedCallback          ([this] (String address) { return oscFeatureSender.connectToAddress (address); });
+        guiTrack->setSecondaryAddressChangedCallback ([this] (String address) { return secondaryOSCFeatureSender.connectToAddress (address); });
+        
+        guiTrack->setBundleAddressChangedCallback ([this] (String address) 
+        { 
+            oscFeatureSender.bundleAddress = address; 
+            secondaryOSCFeatureSender.bundleAddress = address;
+        });
 
         
         guiTrack->setDisplayedOSCAddress          (oscFeatureSender.address);
+        guiTrack->setSecondaryDisplayedOSCAddress (secondaryOSCFeatureSender.address);
         guiTrack->setDisplayedBundleAddress       (oscFeatureSender.bundleAddress);
 
         setGUITrackSamplesPerBlockCallback = [this, guiTrack](int samplesPerBlockExpected)
@@ -198,6 +206,7 @@ private:
     RealTimeHarmonicAnalyser audioAnalyserHarm;
     RealTimeSpectralAnalyser audioAnalyserSpec;
     OSCFeatureAnalysisOutput oscFeatureSender;
+    OSCFeatureAnalysisOutput secondaryOSCFeatureSender;
     AudioDeviceManager       &deviceManager;
     String                   channelName;
     bool                     enabled { true };

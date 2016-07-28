@@ -25,6 +25,7 @@ public:
     static float  getDeviceSettingsComboBoxWidthRatio()      noexcept { return 0.6f; }
     static int    getMaxDeviceSettingsListBoxHeight()        noexcept { return 100; }
     static int    getDeviceSettingsItemHeight()              noexcept { return 24; }
+    static int    getOSCItemHeight()                         noexcept { return 18; }
     static int    getInnerComponentSpacing()                 noexcept { return 6; }
     static int    getComponentInset()                        noexcept { return 7; }
     static int    getFeatureVisualiserTextHeight()           noexcept { return 10; }

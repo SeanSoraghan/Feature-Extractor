@@ -91,6 +91,7 @@ public:
         float rmsLevel = getAudioFeature (AudioFeatures::eAudioFeature::enRMS);
         float centroid = getAudioFeature (AudioFeatures::eAudioFeature::enCentroid);
         float flatness = getAudioFeature (AudioFeatures::eAudioFeature::enFlatness);
+        float ler      = getAudioFeature (AudioFeatures::eAudioFeature::enLER);
         float spread =   getAudioFeature (AudioFeatures::eAudioFeature::enSpread);
         float slope =    getAudioFeature (AudioFeatures::eAudioFeature::enSlope);
         float flux =     getAudioFeature (AudioFeatures::eAudioFeature::enFlux);
@@ -99,10 +100,11 @@ public:
         {
             float f0     =  getAudioFeature (AudioFeatures::eAudioFeature::enF0);
             float her    =  getAudioFeature (AudioFeatures::eAudioFeature::enHarmonicEnergyRatio);
+            float oer    =  getAudioFeature (AudioFeatures::eAudioFeature::enOddEvenHarmonicRatio);
             float inharm =  getAudioFeature (AudioFeatures::eAudioFeature::enInharmonicity);  
             //DBG("F0 estimation: "<<f0<<" |her: "<<her<<" |inharm: "<<inharm);
             //sender.send (bundleAddress, onset, rmsLevel, centroid, flatness, spread, slope, f0, her, inharm);
-            sender.send (bundleAddress, onset, rmsLevel, f0, centroid, slope, spread, flatness, flux, her, inharm);
+            sender.send (bundleAddress, onset, rmsLevel, f0, centroid, slope, spread, flatness, ler, flux, her, oer, inharm);
         }
         else
         {
@@ -128,7 +130,7 @@ public:
         }
         else
         {
-            startTimerHz (FeatureExtractorLookAndFeel::getAnimationRateHz());
+            startTimerHz (60);//FeatureExtractorLookAndFeel::getAnimationRateHz());
             return true;
         }
     }

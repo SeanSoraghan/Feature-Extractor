@@ -122,6 +122,8 @@ public:
     void setAudioSourceTypeChangedCallback (std::function<void (eAudioSourceType type)> f) { audioSourceTypeSelectorController.setAudioSourceTypeChangedCallback (f); }
     void setAddressChangedCallback (std::function<bool (String)> f)                        { oscSettingsController.setAddressChangedCallback (f); }
     void setDisplayedOSCAddress (String address)                                           { oscSettingsController.getView().getAddressEditor().setText (address); }
+    void setSecondaryAddressChangedCallback (std::function<bool (String)> f)               { oscSettingsController.setSecondaryAddressChangedCallback (f); }
+    void setSecondaryDisplayedOSCAddress (String address)                                  { oscSettingsController.getView().getSecondaryAddressEditor().setText (address); }
     void setBundleAddressChangedCallback (std::function<void (String)> f)                  { oscSettingsController.setBundleAddressChangedCallback (f); }
     void setDisplayedBundleAddress (String address)                                        { oscSettingsController.getView().getBundleAddressEditor().setText (address); }
 

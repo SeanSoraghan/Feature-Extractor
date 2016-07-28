@@ -85,7 +85,7 @@ public:
         }
         meanMagnitude = magnitudeSum / (double) numMagnitudes;
 
-        if (magnitudeSum < 0.001)
+        if (magnitudeSum < 0.005)
             return {0.0, 0.0, 0.0};
 
         fillPeakBins (binMagnitudes, channel, peakBins, meanMagnitude);
@@ -229,9 +229,10 @@ private:
                                           double magnitudeSum)
     {
         double inharmonicity = 0.0;
+        int f0Bin = getBinForFrequency (f0Estimate, frequencyRangePerBin);
         for (auto bin : peakBins)
         {
-            if (getBinForFrequency (f0Estimate, frequencyRangePerBin) == bin) //f0 exists in this bin, so don't add any inharmonicity score
+            if (f0Bin == bin) //f0 exists in this bin, so don't add any inharmonicity score
                 continue;
 
             double binStartFrequency = bin * frequencyRangePerBin;

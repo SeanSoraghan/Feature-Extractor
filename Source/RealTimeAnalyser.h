@@ -22,6 +22,7 @@ public:
         enCentroid,
         enSpread,
         enFlatness,
+        enLER,
         enFlux,
         enSlope,
         enHarmonicEnergyRatio,
@@ -46,6 +47,8 @@ public:
                 return String ("Spread");
             case enFlatness:
                 return String ("Flatness");
+            case enLER:
+                return String ("L.E.R");
             case enFlux:
                 return String ("Flux");
             case enSlope:
@@ -212,9 +215,10 @@ public:
             AudioSampleBuffer frequencyBuffer = getFFTAnalyser().getFrequencyData (audioWindow);
 
             /* Get spectral features */
-            SpectralCharacteristics spectralFeatures = spectralAnalyser.calculateSpectralCharacteristics (frequencyBuffer, 0, getFFTAnalyser().getNyquist());
+            SpectralCharacteristics spectralFeatures = spectralAnalyser.calculateSpectralCharacteristics (frequencyBuffer, logRMS, 0, getFFTAnalyser().getNyquist());
             getFeatures().updateFeature (AudioFeatures::eAudioFeature::enCentroid, spectralFeatures.centroid);
             getFeatures().updateFeature (AudioFeatures::eAudioFeature::enFlatness, spectralFeatures.flatness);
+            getFeatures().updateFeature (AudioFeatures::eAudioFeature::enLER,      spectralFeatures.ler);
             getFeatures().updateFeature (AudioFeatures::eAudioFeature::enSpread,   spectralFeatures.spread);
             getFeatures().updateFeature (AudioFeatures::eAudioFeature::enFlux,     spectralFeatures.flux);
             getFeatures().updateFeature (AudioFeatures::eAudioFeature::enSlope,    spectralAnalyser.calculateNormalisedSpectralSlope (frequencyBuffer, 0));
