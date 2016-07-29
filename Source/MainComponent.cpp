@@ -157,10 +157,6 @@ public:
                     inputChannel ++;
                     activeInputBitNumber = activeInputs.findNextSetBit (activeInputBitNumber + 1);
                 }
-                //else
-                //{
-                //    addDisabledAnalyserTrack (channelName);
-                //}
             }
 
             view.updateTracks();
