@@ -6,7 +6,7 @@ Feature Extractor is a real-time audio feature extraction tool. It can analyse a
 
 The c++ JUCE framework: https://github.com/julianstorer/JUCE
 
-In order to build with the Projucer: Ensure that your JUCE repository folder location is ../JUCE (relative to the feature-extractor repository folder). Then open the Feature-Extractor.jucer file with the Projucer. The Projucer can be found at JUCE/extras/Projucer. If you've just cloned the JUCE repo you'll need to build the Projucer project first.
+In order to build with the Projucer: Ensure that your JUCE repository folder location is ../JUCE (relative to the feature-extractor repository folder). Then open the Feature-Extractor.jucer file with the Projucer. The Projucer can be found at JUCE/extras/Projucer. If you've just cloned the JUCE repo you'll need to build the Projucer project first. Once you've opened the Feature-Extractor.jucer file in the projucer, click on the config tab and then click 'save and open in IDE' at the bottom left. This will open the project in Visual Studio (windows) or XCode (mac). Then you can build and run the Feature-Extractor app.
 
 #Audio input:
 
