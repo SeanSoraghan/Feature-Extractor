@@ -2,7 +2,7 @@
 
 <JUCERPROJECT id="GHLpCD" name="Feature-Extractor" projectType="guiapp" version="1.0.0"
               bundleIdentifier="com.yourcompany.FeatureExtractor" includeBinaryInAppConfig="1"
-              jucerVersion="4.2.1">
+              jucerVersion="4.2.3">
   <MAINGROUP id="NL8vov" name="Feature-Extractor">
     <GROUP id="{B4A167B2-F57A-6468-E14C-759AA38DF98D}" name="Source">
       <GROUP id="{18EA58DB-8594-7B91-F382-B60069520EBF}" name="AudioPlayback">

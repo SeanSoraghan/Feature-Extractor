@@ -83,7 +83,17 @@ public:
         view.getBundleAddressEditor().addListener (this);
     }
 
-    void textEditorReturnKeyPressed (TextEditor& editor) 
+    void textEditorReturnKeyPressed (TextEditor& editor) override
+    {
+        textEditorInteractedWith (editor);
+    }
+
+    void textEditorFocusLost (TextEditor& editor) override
+    {
+        textEditorInteractedWith (editor);
+    }
+
+    void textEditorInteractedWith (TextEditor& editor)
     {
         if (&editor == &getView().getAddressEditor())
             if (addressChangedCallback)
@@ -100,16 +110,16 @@ public:
                 bundleAddressChangedCallback (editor.getText());
     }
 
-    void setAddressChangedCallback          (std::function<bool (String address)> function) 
+    void setAddressChangedCallback (std::function<bool (String address)> function) 
     { 
-        addressChangedCallback          = function; 
+        addressChangedCallback = function; 
     }
 
     void setSecondaryAddressChangedCallback (std::function<bool (String address)> function) 
     { 
         secondaryAddressChangedCallback = function; 
     }
-    void setBundleAddressChangedCallback    (std::function<void (String address)> function) { bundleAddressChangedCallback    = function; }
+    void setBundleAddressChangedCallback (std::function<void (String address)> function) { bundleAddressChangedCallback    = function; }
 
     OSCSettingsView& getView()
     {
