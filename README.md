@@ -16,10 +16,6 @@ The controls at the top of the app are used to switch bewtween input devices and
 
 The central bars show the real-time values of the various features, with their names at the bottom.
 
-#Audio settings:
-
-Various audio settings can be set from the bottom-left panel. The advanced settings contain sample rate and audio buffer size.
-
 #OSC Settings:
 
 The various audio features will be sent via OSC to the ip address which is set from the app. They will be sent together in an OSC bundle. 
