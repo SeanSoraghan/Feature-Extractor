@@ -87,8 +87,6 @@ public:
                     int rIndex = index + readIndex;
                     buffer.setSample (0, index, circleBuffer.getReadPointer (0)[rIndex] * gain);
                 }
-                //buffer.copyFrom (0, 0, circleBuffer, 0, readIndex, numSamplesRequired);
-                //buffer.copyFrom (1, 0, circleBuffer, 1, spectralReadPosition, numSamplesRequired);
             }
             else
             {
@@ -96,7 +94,6 @@ public:
                 {
                     const int modIndex = (index + readIndex) % circleBuffer.getNumSamples();
                     buffer.setSample (0, index, circleBuffer.getReadPointer (0)[modIndex] * gain);
-                    //buffer.setSample (1, index, circleBuffer.getReadPointer (1)[modIndex]);
                 }
             }
             updateBufferToDraw (buffer);
