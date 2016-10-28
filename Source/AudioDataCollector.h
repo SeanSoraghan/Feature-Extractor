@@ -75,7 +75,7 @@ public:
         buffer.clear();
         buffer.setSize (1, numSamplesRequired);
 
-        while (analysisBufferUpdating.get() == 1) {}
+        while (analysisBufferUpdating.get() == 1 || indexesOverlap (numSamplesRequired)) {}
         if (analysisBufferUpdating.get() != 1)
         {
             readIndex = (circleBuffer.getNumSamples() + (writeIndex - numSamplesRequired)) % circleBuffer.getNumSamples();
