@@ -74,9 +74,6 @@ public:
         AudioSampleBuffer buffer = AudioSampleBuffer();
         buffer.clear();
         buffer.setSize (1, numSamplesRequired);
-
-        readIndex = (circleBuffer.getNumSamples() + (writeIndex - numSamplesRequired)) % circleBuffer.getNumSamples();
-
         while (analysisBufferUpdating.get() == 1 || indexesOverlap (numSamplesRequired)) {}
         if (analysisBufferUpdating.get() != 1)
         {
@@ -90,6 +87,7 @@ public:
 
                 buffer.setSample (0, index, circleBuffer.getReadPointer (0)[rIndex] * gain);
             }
+            readIndex = (readIndex + numSamplesRequired) % circleBuffer.getNumSamples();
             updateBufferToDraw (buffer);
         }
         return buffer;
