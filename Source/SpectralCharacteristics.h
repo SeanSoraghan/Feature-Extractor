@@ -50,61 +50,70 @@ public:
         double flatnessMagnitudeSum = 0.0;
         double flux                 = 0.0;
         double lhr                  = 0.0;
-
+        double numMagnitudesUsedInFlatnessCalculation = 0.0;
         std::vector<double> binCentreFrequencies;
         std::vector<double> binMagnitudes;
+
+        float calculateFlatness (double eps, double invNumMagnitudes)
+        {
+            return flatnessMagnitudeSum > eps ? (float) (pow (magnitudeProduct, invNumMagnitudes) / (invNumMagnitudes * flatnessMagnitudeSum)) : 0.0f;
+        }
+
+        void fillIntermediateValues (AudioSampleBuffer& fftResults, std::vector<double>& previousBinMags, int channel, int numMagnitudes, double eps, double nyquist)
+        {
+            double frequencyRangePerBin = nyquist / numMagnitudes;
+            int lowerPortion = numMagnitudes / 5;
+            for (size_t magnitude = 0; magnitude < (size_t) numMagnitudes; magnitude++)
+            {
+                int fftIndex = magnitude * 2;
+
+                double binCentreFrequency = double(magnitude) * frequencyRangePerBin + (frequencyRangePerBin / 2.0);
+                binCentreFrequencies[magnitude] = binCentreFrequency;
+                double binValue = (double) fftResults.getSample (channel, (int)fftIndex);
+                double binMagnitude = binValue * binValue;
+
+                /*flux*/
+                double diff = abs (binMagnitude) - abs (previousBinMags[magnitude]);
+                double rectifiedDiff = (diff + abs (diff)) / 2.0;
+                if (diff > 0.0)
+                    flux += rectifiedDiff;
+                ///////
+            
+                binMagnitudes[magnitude] = binMagnitude;
+            
+                magnitudeSum += binMagnitude;
+            
+                if (magnitude == lowerPortion)
+                    lhr = magnitudeSum;
+
+                if (binMagnitude > eps)
+                {
+                    flatnessMagnitudeSum += binMagnitude;
+                    magnitudeProduct     *= binMagnitude;
+                    numMagnitudesUsedInFlatnessCalculation ++;
+                }
+                weightedMagnitudeSum += binCentreFrequency * binMagnitude;
+            }
+        }
     };
 
     SpectralCharacteristics calculateSpectralCharacteristics (AudioSampleBuffer& fftResults, double rms, int channel, double nyquist)
     {
         jassert (fftResults.getNumSamples() % 2 == 0);
-        const int numFFTElements = (int) fftResults.getNumSamples() / 2;
-        const int numMagnitudes  = (int) numFFTElements / 2;
+        const int numFFTElements    = (int) fftResults.getNumSamples() / 2;
+        const int numMagnitudes     = (int) numFFTElements / 2;
         double frequencyRangePerBin = nyquist / numMagnitudes;
         IntermediateSpectralCharacteristics intermediates (numMagnitudes);
         jassert (previousBinMagnitudes.size() == binMagnitudes.size());
         double eps = 0.01 * rms;
-        double numMagnitudesUsedInFlatnessCalculation = 0.0;
-        int lowerPortion = numMagnitudes / 5;
-        for (size_t magnitude = 0; magnitude < (size_t) numMagnitudes; magnitude++)
-        {
-            int fftIndex = magnitude * 2;
-
-            double binCentreFrequency = double(magnitude) * frequencyRangePerBin + (frequencyRangePerBin / 2.0);
-            intermediates.binCentreFrequencies[magnitude] = binCentreFrequency;
-            double binValue = (double) fftResults.getSample (channel, (int)fftIndex);
-            double binMagnitude = binValue * binValue;
-
-            /*flux*/
-            double diff = abs (binMagnitude) - abs (previousBinMagnitudes[magnitude]);
-            double rectifiedDiff = (diff + abs (diff)) / 2.0;
-            if (diff > 0.0)
-                intermediates.flux += rectifiedDiff;
-            ///////
-            
-            intermediates.binMagnitudes[magnitude] = binMagnitude;
-            
-            intermediates.magnitudeSum += binMagnitude;
-            
-            if (magnitude == lowerPortion)
-                intermediates.lhr = intermediates.magnitudeSum;
-
-            if (binMagnitude > eps)
-            {
-                intermediates.flatnessMagnitudeSum += binMagnitude;
-                intermediates.magnitudeProduct     *= binMagnitude;
-                numMagnitudesUsedInFlatnessCalculation ++;
-            }
-            intermediates.weightedMagnitudeSum += binCentreFrequency * binMagnitude;
-        }
+        intermediates.fillIntermediateValues (fftResults, previousBinMagnitudes, channel, numMagnitudes, eps, nyquist);
         
         float maxFlux = (numMagnitudes * (numMagnitudes + 1)) / 2.0f;
         intermediates.flux /= maxFlux;
-        return calculateSpectralCharacteristicsFromIntermediates (intermediates, numMagnitudesUsedInFlatnessCalculation, eps, nyquist, numMagnitudes);
+        return calculateSpectralCharacteristicsFromIntermediates (intermediates, eps, nyquist, numMagnitudes);
     }
 
     SpectralCharacteristics calculateSpectralCharacteristicsFromIntermediates (IntermediateSpectralCharacteristics intermediates, 
-                                                                               double numMagnitudesUsedInFlatnessCalculation,
                                                                                double eps,
                                                                                double nyquist,
                                                                                int numMagnitudes)
@@ -117,8 +126,9 @@ public:
 
         float centroid = (float) (intermediates.weightedMagnitudeSum / intermediates.magnitudeSum);
         
-        double invNumMagnitudes = 1.0 / (numMagnitudesUsedInFlatnessCalculation > 0.0 ? numMagnitudesUsedInFlatnessCalculation : 1.0);
-        float flatness = intermediates.flatnessMagnitudeSum > eps ? (float) (pow (intermediates.magnitudeProduct, invNumMagnitudes) / (invNumMagnitudes * intermediates.flatnessMagnitudeSum)) : 0.0f;
+        const double flatnessMags = intermediates.numMagnitudesUsedInFlatnessCalculation;
+        double invNumMagnitudes = 1.0 / (flatnessMags > 0.0 ? flatnessMags : 1.0);
+        float flatness = intermediates.calculateFlatness (eps, invNumMagnitudes);
         float logFlatness = log10 (flatness * 9.0 + 1.0);
         float c = centroid / (float)(nyquist / 2.0);
         float logCentroid = log10 (c * 9.0f + 1.0f);
