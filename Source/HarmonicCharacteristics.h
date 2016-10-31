@@ -155,21 +155,6 @@ private:
         double evenHarmonicEnergy = 0.0;
         double oddHarmonicEnergy = 0.0;
         
-        //std::vector<double> harmonicEnergyValues;
-        //for (int h = 0; h < numHarmonics; h++)
-        //    harmonicEnergyValues.push_back (0.0);
-
-        //int peakNum = 0;
-        //for (int p : peakBins)
-        //{
-        //    double peakFreq = p * frequencyRangePerBin + frequencyRangePerBin * 0.5;
-        //    if (peakFreq > f0Estimate)
-        //    {
-        //        double peakRatio = getFrequencyRatio (peakFreq, f0Estimate);
-
-        //    }
-        //    peakNum ++;
-        //}
         for (double lower = 1.0; lower < numLower + 1.0; ++lower)
         {
             double lowerHarmFreq = f0Estimate / pow(2.0, lower);
