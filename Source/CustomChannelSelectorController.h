@@ -112,9 +112,6 @@ public:
             getLookAndFeel().drawTickBox (g, *this, tickX, height / 2 - tickW / 2, tickW, tickW,
                                             enabled, true, true, false);
 
-            //if (enabled)
-            //    g.fillAll (FeatureExtractorLookAndFeel::getSelectedColour());
-
             g.setFont (FeatureExtractorLookAndFeel::getFeatureVisualiserTextHeight());
             g.setColour (findColour (ListBox::textColourId, true).withMultipliedAlpha (enabled ? 1.0f : 0.6f));
             g.drawText (item, tickX + tickW + FeatureExtractorLookAndFeel::getInnerComponentSpacing(), 0, width - tickX - 2, height, Justification::centredLeft, true);

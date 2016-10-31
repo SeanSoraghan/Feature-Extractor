@@ -30,8 +30,6 @@
       </GROUP>
       <GROUP id="{85C55AD8-1816-3A74-1907-BF60B6B73A66}" name="GUI">
         <GROUP id="{C0C3AE75-1E87-7464-49DD-C9FE113AD16E}" name="AudioIO">
-          <FILE id="O7cr6W" name="CustomAudioDeviceSettingsPanel.h" compile="0"
-                resource="0" file="Source/CustomAudioDeviceSettingsPanel.h"/>
           <FILE id="IPqUxe" name="CustomAudioSettingsComponent.cpp" compile="1"
                 resource="0" file="Source/CustomAudioSettingsComponent.cpp"/>
           <FILE id="G0Qoay" name="CustomAudioSettingsComponent.h" compile="0"

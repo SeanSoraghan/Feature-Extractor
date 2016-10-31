@@ -75,11 +75,11 @@ public:
         buffer.clear();
         buffer.setSize (1, numSamplesRequired);
 
+        readIndex = (circleBuffer.getNumSamples() + (writeIndex - numSamplesRequired)) % circleBuffer.getNumSamples();
+
         while (analysisBufferUpdating.get() == 1 || indexesOverlap (numSamplesRequired)) {}
         if (analysisBufferUpdating.get() != 1)
         {
-            readIndex = (circleBuffer.getNumSamples() + (writeIndex - numSamplesRequired)) % circleBuffer.getNumSamples();
-            
             if (readIndex + numSamplesRequired <= circleBuffer.getNumSamples())
             {
                 for (int index = 0; index < numSamplesRequired; index++)
