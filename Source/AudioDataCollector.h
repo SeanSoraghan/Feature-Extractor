@@ -80,21 +80,15 @@ public:
         while (analysisBufferUpdating.get() == 1 || indexesOverlap (numSamplesRequired)) {}
         if (analysisBufferUpdating.get() != 1)
         {
-            if (readIndex + numSamplesRequired <= circleBuffer.getNumSamples())
+            const bool wrap = readIndex + numSamplesRequired > circleBuffer.getNumSamples();
+            for (int index = 0; index < numSamplesRequired; index++)
             {
-                for (int index = 0; index < numSamplesRequired; index++)
-                {
-                    int rIndex = index + readIndex;
-                    buffer.setSample (0, index, circleBuffer.getReadPointer (0)[rIndex] * gain);
-                }
-            }
-            else
-            {
-                for (int index = 0; index < numSamplesRequired; index++)
-                {
-                    const int modIndex = (index + readIndex) % circleBuffer.getNumSamples();
-                    buffer.setSample (0, index, circleBuffer.getReadPointer (0)[modIndex] * gain);
-                }
+                int rIndex = index + readIndex;
+                    
+                if (wrap)
+                    rIndex = rIndex % circleBuffer.getNumSamples();
+
+                buffer.setSample (0, index, circleBuffer.getReadPointer (0)[rIndex] * gain);
             }
             updateBufferToDraw (buffer);
         }
