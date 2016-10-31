@@ -193,8 +193,6 @@ public:
         audioAnalyserSpec.stopThread (100);
     }
 
-    
-
     String getChannelName() const noexcept { return channelName; }
     bool isEnabled()        const noexcept { return enabled; }
 private: 

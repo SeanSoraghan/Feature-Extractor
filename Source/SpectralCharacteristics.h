@@ -37,13 +37,12 @@ public:
             previousBinMagnitudes.push_back (0.0f);
     }
 
-    SpectralCharacteristics calculateSpectralCharacteristics (AudioSampleBuffer& fftResults, double rms, int channel, double nyquist)
+    struct IntermediateSpectralCharacteristics
     {
-        jassert (fftResults.getNumSamples() % 2 == 0);
-        const int numFFTElements = (int) fftResults.getNumSamples() / 2;
-        const int numMagnitudes  = (int) numFFTElements / 2;
-        double frequencyRangePerBin = nyquist / numMagnitudes;
-        
+        IntermediateSpectralCharacteristics (size_t numMagnitudes) : binCentreFrequencies (numMagnitudes),
+                                                                     binMagnitudes        (numMagnitudes)
+        {}
+
         double weightedMagnitudeSum = 0.0;
         double varMagnitudeSum      = 0.0;
         double magnitudeSum         = 0.0;
@@ -52,11 +51,18 @@ public:
         double flux                 = 0.0;
         double lhr                  = 0.0;
 
-        std::vector<double> binCentreFrequencies ((size_t)numMagnitudes);
-        std::vector<double> binMagnitudes ((size_t)numMagnitudes);
+        std::vector<double> binCentreFrequencies;
+        std::vector<double> binMagnitudes;
+    };
 
+    SpectralCharacteristics calculateSpectralCharacteristics (AudioSampleBuffer& fftResults, double rms, int channel, double nyquist)
+    {
+        jassert (fftResults.getNumSamples() % 2 == 0);
+        const int numFFTElements = (int) fftResults.getNumSamples() / 2;
+        const int numMagnitudes  = (int) numFFTElements / 2;
+        double frequencyRangePerBin = nyquist / numMagnitudes;
+        IntermediateSpectralCharacteristics intermediates (numMagnitudes);
         jassert (previousBinMagnitudes.size() == binMagnitudes.size());
-
         double eps = 0.01 * rms;
         double numMagnitudesUsedInFlatnessCalculation = 0.0;
         int lowerPortion = numMagnitudes / 5;
@@ -65,7 +71,7 @@ public:
             int fftIndex = magnitude * 2;
 
             double binCentreFrequency = double(magnitude) * frequencyRangePerBin + (frequencyRangePerBin / 2.0);
-            binCentreFrequencies[magnitude] = binCentreFrequency;
+            intermediates.binCentreFrequencies[magnitude] = binCentreFrequency;
             double binValue = (double) fftResults.getSample (channel, (int)fftIndex);
             double binMagnitude = binValue * binValue;
 
@@ -73,50 +79,57 @@ public:
             double diff = abs (binMagnitude) - abs (previousBinMagnitudes[magnitude]);
             double rectifiedDiff = (diff + abs (diff)) / 2.0;
             if (diff > 0.0)
-                flux += rectifiedDiff;
+                intermediates.flux += rectifiedDiff;
             ///////
             
-            binMagnitudes[magnitude] = binMagnitude;
+            intermediates.binMagnitudes[magnitude] = binMagnitude;
             
-            magnitudeSum += binMagnitude;
+            intermediates.magnitudeSum += binMagnitude;
             
             if (magnitude == lowerPortion)
-                lhr = magnitudeSum;
+                intermediates.lhr = intermediates.magnitudeSum;
 
             if (binMagnitude > eps)
             {
-                flatnessMagnitudeSum += binMagnitude;
-                magnitudeProduct     *= binMagnitude;
+                intermediates.flatnessMagnitudeSum += binMagnitude;
+                intermediates.magnitudeProduct     *= binMagnitude;
                 numMagnitudesUsedInFlatnessCalculation ++;
             }
-            weightedMagnitudeSum += binCentreFrequency * binMagnitude;
+            intermediates.weightedMagnitudeSum += binCentreFrequency * binMagnitude;
         }
         
         float maxFlux = (numMagnitudes * (numMagnitudes + 1)) / 2.0f;
-        flux /= maxFlux;
+        intermediates.flux /= maxFlux;
+        return calculateSpectralCharacteristicsFromIntermediates (intermediates, numMagnitudesUsedInFlatnessCalculation, eps, nyquist, numMagnitudes);
+    }
 
+    SpectralCharacteristics calculateSpectralCharacteristicsFromIntermediates (IntermediateSpectralCharacteristics intermediates, 
+                                                                               double numMagnitudesUsedInFlatnessCalculation,
+                                                                               double eps,
+                                                                               double nyquist,
+                                                                               int numMagnitudes)
+    {
         double epsSum = 0.05;
-        if (!(magnitudeSum > epsSum))
+        if (!(intermediates.magnitudeSum > epsSum))
             return {0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 
-        lhr /= magnitudeSum;
+        intermediates.lhr /= intermediates.magnitudeSum;
 
-        float centroid = (float) (weightedMagnitudeSum / magnitudeSum);
-        //        float scaledC = (float)(log2 (1.0 + 1023.0 * (centroid)) / 10.0);
+        float centroid = (float) (intermediates.weightedMagnitudeSum / intermediates.magnitudeSum);
         
         double invNumMagnitudes = 1.0 / (numMagnitudesUsedInFlatnessCalculation > 0.0 ? numMagnitudesUsedInFlatnessCalculation : 1.0);
-        float flatness = flatnessMagnitudeSum > eps ? (float) (pow (magnitudeProduct, invNumMagnitudes) / (invNumMagnitudes * flatnessMagnitudeSum)) : 0.0f;
+        float flatness = intermediates.flatnessMagnitudeSum > eps ? (float) (pow (intermediates.magnitudeProduct, invNumMagnitudes) / (invNumMagnitudes * intermediates.flatnessMagnitudeSum)) : 0.0f;
         float logFlatness = log10 (flatness * 9.0 + 1.0);
         float c = centroid / (float)(nyquist / 2.0);
         float logCentroid = log10 (c * 9.0f + 1.0f);
         for (size_t i = 0; i < (size_t) numMagnitudes; ++i)
         {
-            varMagnitudeSum += pow ((binCentreFrequencies[i] / nyquist) - (centroid / nyquist), 2.0) * binMagnitudes[i];
-            previousBinMagnitudes[i] = binMagnitudes[i];
+            intermediates.varMagnitudeSum += pow ((intermediates.binCentreFrequencies[i] / nyquist) - (centroid / nyquist), 2.0) * intermediates.binMagnitudes[i];
+            previousBinMagnitudes[i] = intermediates.binMagnitudes[i];
         }
         float maxSpread = (float) ((centroid / nyquist) * (1.0 - (centroid / nyquist)));
-        float spread = (float) ((varMagnitudeSum / magnitudeSum) / maxSpread);
-        return {logCentroid, spread, logFlatness, (float) lhr, (float) flux};
+        float spread = (float) ((intermediates.varMagnitudeSum / intermediates.magnitudeSum) / maxSpread);
+        return {logCentroid, spread, logFlatness, (float) intermediates.lhr, (float) intermediates.flux};
     }
 
     float calculateNormalisedSpectralSlope (AudioSampleBuffer& fftResults, int channel)
