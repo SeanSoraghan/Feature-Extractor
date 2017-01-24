@@ -104,7 +104,7 @@ public:
         const int numMagnitudes     = (int) numFFTElements / 2;
         double frequencyRangePerBin = nyquist / numMagnitudes;
         IntermediateSpectralCharacteristics intermediates (numMagnitudes);
-        jassert (previousBinMagnitudes.size() == binMagnitudes.size());
+        jassert (previousBinMagnitudes.size() == intermediates.binMagnitudes.size());
         double eps = 0.01 * rms;
         intermediates.fillIntermediateValues (fftResults, previousBinMagnitudes, channel, numMagnitudes, eps, nyquist);
         
