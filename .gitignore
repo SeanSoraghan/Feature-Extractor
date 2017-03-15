@@ -6,21 +6,4 @@ core
 *.swo
 *.log
 *~
-Installer/WindowsInstaller/ROLIEquator64.msi
-Installer/WindowsInstaller/ROLIEquator64.wixobj
-Installer/WindowsInstaller/ROLIEquator64.wixpdb
-AppExtras/Samples/Equator.dat
-Installer/build/Equator.mpkg/Contents/distribution.dist
-Installer/build/Equator.mpkg/Contents/Packages/Documentation.pkg
-Installer/build/Equator.mpkg/Contents/Packages/Plugin.pkg
-Installer/build/Equator.mpkg/Contents/Packages/Presets.pkg
-Installer/build/Equator.mpkg/Contents/Packages/Samples.pkg
-Installer/build/Equator.mpkg/Contents/Packages/Standalone.pkg
-Installer/build/Equator.mpkg/Contents/Resources/English.lproj/Localizable.strings
-Installer/WindowsInstaller/ROLIEquatorForRISE32.msi
-Installer/WindowsInstaller/ROLIEquatorForRISE32.wixpdb
-Installer/WindowsInstaller/ROLIEquatorForRISE64.msi
-Installer/WindowsInstaller/ROLIEquatorForRISE64.wixobj
-Installer/WindowsInstaller/ROLIEquatorForRISE64.wixpdb
-AppExtras/Mobile Images/DefaultSoundPack.pxm
-AppExtras/Mobile Images/Mobile Presets.pxm
+
